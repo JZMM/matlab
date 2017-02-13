@@ -1,0 +1,230 @@
+% This function is used to plot psychometric curve; there're 3 curve to be
+% plotted, the whole session's curve, and another 2 curve for the early block 
+% and the late block of the whole session; set 'PercentV' to a proper value
+% as percentage of the whole session as early and late block. for
+% example:0.6 means the fisrt 60% of all trials are early block and the
+% last 60% of all trials are late block.
+
+PercentV = 0.5;      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Col = ['r','c','k'];     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Tone_frequency = Data_extract.Tone_frequency;
+Frequencies = double(Data_extract.Frequencies);
+Action_choice = double(Data_extract.Action_choice);
+Miss_Ind = Data_extract.Miss_Ind;
+toneOct = log2(Frequencies);
+Trial_type = Data_extract.Trial_type;
+
+trialN = length(Tone_frequency);
+Perc = round(trialN*PercentV);
+
+
+ToneF{1} = Tone_frequency([1:Perc]);
+ToneF{2} = Tone_frequency([trialN-Perc:end]);
+ToneF{3} = Tone_frequency;
+ActC{1} = Action_choice([1:Perc]);
+ActC{2} = Action_choice([trialN-Perc:end]);
+ActC{3} = Action_choice;
+MisI{1} = Miss_Ind([1:Perc]);
+MisI{2} = Miss_Ind([trialN-Perc:end]);
+MisI{3} = Miss_Ind;
+
+
+for j = 1:3
+    for i = 1:length(Frequencies)
+        Sco(j,i) = sum(ToneF{j} == Frequencies(i) & ActC{j} == 1)/sum(ToneF{j} == Frequencies(i) & MisI{j} == 0);
+    end
+    for n = 1:length(Frequencies)
+        NumOfTrial(j,n) = sum(ToneF{j}==Frequencies(n) & ~MisI{j});
+        All_SEM(j,n) = std(ActC{j}(ToneF{j}==Frequencies(n) & ~MisI{j}))/(NumOfTrial(j,n))^.5; 
+    end
+end
+%%
+useWeights = 1;
+DataSet = 3;
+b0{DataSet} = [0; 1; 15;2];      % Initial guess of the parameters. Try different values to get good fit!
+% x = log2(double(Tone_frequency(~Miss_Ind)));
+% y = double(Action_choice(~Miss_Ind));
+
+x = toneOct;
+y = Sco(DataSet,:);
+
+% The logistic function
+modelfun = @(b,x) (b(1)+ b(2)./(1+exp(-(x - b(3))./b(4))));
+% The 4 parameters to fit.
+% b(1), the minimum ?P(Choice Right)?; 
+% b(2), the maximum ?P(Choice Right)?.
+% b(3), the inflection point of the sigmoid; 
+% 1/b(4), the slope of the sigmoid; 
+
+opts = statset('nlinfit');
+opts.RobustWgtFun = 'bisquare';
+if useWeights == 1 
+    [b,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(x,y,modelfun,b0{DataSet},'Weights',NumOfTrial(DataSet,:));
+else
+    [b,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(x,y,modelfun,b0{DataSet},opts);
+end
+X{DataSet} = linspace(min(x), max(x), 100);
+% y1 = modelfun(b,x1);
+
+% Plot confidence intervel
+[Y{DataSet}, delta] = nlpredci(modelfun, X{DataSet}, b, R, 'Covar',...
+    CovB, 'MSE', MSE);
+lower = Y{DataSet} - delta;
+upper = Y{DataSet} + delta;
+
+figure;
+clf; hold on;
+h_data = scatter(toneOct,y,80,Col(3),'filled');
+set(gcf,'color','w');
+h_fit = plot(X{DataSet}, Y{DataSet},'color','k','linewidth',3);
+%%  
+PsychoVar.X = X;
+PsychoVar.Y = Y;
+PsychoVar.Sco = Sco;
+PsychoVar.toneOct = toneOct;
+PsychoVar.b0 = b0;
+PsychoVar.All_SEM = All_SEM;
+PsychoVar.NumOfTrial = NumOfTrial;
+PsychoVar.PercentV = PercentV;
+%%   Plotting
+Col = ['r','c','k']; 
+psychoPlot = figure;hold on; set(gcf,'color','w','position',[500 500 500 400]);
+line([PsychoVar.toneOct(1) PsychoVar.toneOct(end)],[0.5 0.5],'linestyle','--','color',[.6 .6 .6],'linewidth',1) ;
+line([(PsychoVar.toneOct(1)+PsychoVar.toneOct(end))/2 (PsychoVar.toneOct(1)+PsychoVar.toneOct(end))/2],[0 1],'linestyle','--','color',[.6 .6 .6],'linewidth',1) ;
+for u = 1:3
+   pl(u) = plot(PsychoVar.X{u}, PsychoVar.Y{u},'color',Col(u),'linewidth',5);
+end
+for u = 1:3
+   scatter(PsychoVar.toneOct,PsychoVar.Sco(u,:),200,Col(u),'filled');
+end
+alpha(0.6);
+set(gca,'fontsize',20,'fontweight','bold','xtick',PsychoVar.toneOct,'xticklabel',round(Fre/1000));
+xlim([PsychoVar.toneOct(1) PsychoVar.toneOct(end)]);
+title('Psychometric Curve')
+legend(pl([1:3]),'Early Block','Late Block','Whole Session',[280 100 .2 .2])
+legend('boxoff');
+
+%%   Save variables
+save('dff_ZL_h37_20161113_fied1_d167_3x','PsychoVar','-append');
+
+%% Save figure
+savefig = 0;
+savePPT = 1;
+pptName = 'testingPPT.pptx';
+savepath = '';
+% if savefig == 1
+%    saveas(gcf,[savepath '/' Data_extract.Animal_Name_File(1:end-4) '.fig']); 
+% end
+if savePPT == 1
+    isOpen = exportToPPTX();
+    if ~isempty(isOpen)
+       exportToPPTX('close'); 
+    end
+    exportToPPTX('open',pptName); 
+   for w = 1%:nROIs
+       exportToPPTX('switchslide',w); 
+       exportToPPTX('addpicture',gcf,'position',[0 7 2 2]); 
+   end
+end
+exportToPPTX('saveandclose','testingPPT');
+
+
+
+
+
+
+
+
+
+
+
+
+%%    using bootstrap to fit
+for j = 1:2
+    for i = 1:length(Frequencies)
+        Sco(j,i) = sum(ToneF{j} == Frequencies(i) & ActC{j} == 1)/sum(ToneF{j} == Frequencies(i) & MisI{j} == 0);
+    end
+    fit_fun_handle = @fit_logistic_psych;
+    tic
+%     parpool('local');
+    options = statset('UseParallel',true);
+    [bootstat_control, bootsam] = bootstrp(500, @(x, y) fit_fun_handle(x, y,0), toneOct, Sco(j,:),'Options',options);
+    toc
+%     delete(gcp('nocreate'));
+    gof = [bootstat_control.gof];
+    rmse = [gof.rmse];
+    sse = [gof.sse];
+    rsq = [gof.rsquare];
+    adjrsquare = [gof.adjrsquare];
+
+    inds_use1 = find(rmse < prctile(rmse,50));
+    inds_use2 = find(rsq > prctile(rsq,50));
+
+    A1(j) = median([bootstat_control(inds_use1).a]);
+    B1(j) = median([bootstat_control(inds_use1).b]);
+    C1(j) = median([bootstat_control(inds_use1).c]);
+end
+%%    using nlinfit to fit
+% x = log2(double(Tone_frequency(~Miss_Ind)));
+% y = double(Action_choice(~Miss_Ind));
+
+x = toneOct;
+y = Scores;
+
+% The logistic function
+modelfun = @(b,x) (b(1)+ b(2)./(1+exp(-(x - b(3))./b(4))));
+% The 4 parameters to fit.
+% b(1), the minimum ?P(Choice Right)?; 
+% b(2), the maximum ?P(Choice Right)?.
+% b(3), the inflection point of the sigmoid; 
+% 1/b(4), the slope of the sigmoid; 
+
+
+
+opts = statset('nlinfit');
+opts.RobustWgtFun = 'bisquare';
+if useWeights == 1 
+    [b,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(x,y,modelfun,b0,'Weights',NumOfTrial);
+else
+    [b,R,J,CovB,MSE,ErrorModelInfo] = nlinfit(x,y,modelfun,b0,opts);
+end
+x1 = linspace(min(x), max(x), 100);
+% y1 = modelfun(b,x1);
+
+% Plot confidence intervel
+[y1, delta] = nlpredci(modelfun, x1, b, R, 'Covar',...
+    CovB, 'MSE', MSE);
+lower = y1 - delta;
+upper = y1 + delta;
+
+figure;
+clf; hold on;
+h_data = scatter(toneOct,Scores,80,Col(3),'filled');
+set(gcf,'color','w');
+h_fit = plot(x1, y1,'color','k','linewidth',3);
+%%
+
+AA = [A1 a1];
+BB = [B1 b1];
+CC = [C1 c1];
+All_scores = [Sco;Scores];
+%%
+Col = ['r','c','k'];
+figure; hold on;
+set(gcf,'position',[500 500 500 400],'color','w');
+x = linspace(min(toneOct), max(toneOct), 100);
+for i = 1:3 
+    y(i,:) = AA(i)./(1+exp(-(x - BB(i))/CC(i)));
+    h_curve_(i) = plot(x,y(i,:),'color',Col(i),'linewidth',4);  
+end
+for i = 1:3
+    scatter(toneOct,All_scores(i,:),80,Col(i),'filled')
+end
+alpha(.6);
+%%
+set(gca,'fontsize',15,'fontweight','bold');
+xlim([toneOct(1) toneOct(end)]);
+title('Psychometric Curve')
+legend('Early Block','Late Block','Whole Session',[280 100 .2 .2])
+
