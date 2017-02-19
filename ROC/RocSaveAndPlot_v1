@@ -1,0 +1,123 @@
+fn = 'dff_ZL_h37_20161113_fied1_d167_3x';       %#####################################################
+load(fn);
+load('ROCColorMap');
+temp = dff_subtr_preSoundmean;   % dff_subtr_preSoundmean  dff_prctileF0  dff_meanF0   #####################################################
+SmoothBand = 11;
+
+
+length_frames_T = length( temp{1}(1,[F_num_T(1,1):F_num_T(1,2)]));
+length_frames_A = length( temp{1}(1,[F_num_A(1,1):F_num_A(1,2)]));
+for nROI = 1:nROIs
+    for triN = 1:TrialN
+        CaSigAlineTone{nROI}(triN,:) = temp{nROI}(triN,[F_num_T(triN,1):F_num_T(triN,2)]);  % get the same frames before and after tone onset 
+        CaSigMean_Tone{nROI}(triN,:) = smooth(CaSigAlineTone{nROI}(triN,:),SmoothBand); % use smooth to get the moving average value
+        CaSigAlineAct{nROI}(triN,:) = temp{nROI}(triN,[F_num_A(triN,1):F_num_A(triN,2)]);  % get the same frames before and after choice   
+        CaSigMean_Act{nROI}(triN,:) = smooth(CaSigAlineAct{nROI}(triN,:),SmoothBand); 
+    end    
+end
+AlineCaSigData.CaSigAlineTone = CaSigAlineTone;
+AlineCaSigData.CaSigMean_Tone = CaSigMean_Tone;
+AlineCaSigData.CaSigAlineAct = CaSigAlineAct;
+AlineCaSigData.CaSigMean_Act = CaSigMean_Act;
+AlineCaSigData.length_frames_T = length_frames_T;
+AlineCaSigData.length_frames_A = length_frames_A;
+save(fn,'AlineCaSigData','ROCColorMap','-append');
+%% find index
+CaSigAlineTone = AlineCaSigData.CaSigAlineTone;
+CaSigMean_Tone = AlineCaSigData.CaSigMean_Tone;
+CaSigAlineAct = AlineCaSigData.CaSigAlineAct;
+CaSigMean_Act = AlineCaSigData.CaSigMean_Act;
+length_frames_T = AlineCaSigData.length_frames_T;
+length_frames_A = AlineCaSigData.length_frames_A;
+
+AllTri = [1:TrialN];            % Define trials that are used
+MisExcl = find(Miss_Ind==0);
+ProbTri = find(Probe_Ind==1);
+NonProbTri = find(Probe_Ind==0);
+Trials = {AllTri,MisExcl,ProbTri,NonProbTri};
+TrialsName = {'AllTri','MisExcl','ProbTri','NonProbTri'};
+
+LowHighTyp = double(Trial_type)';        % Define Label: 0 and 1
+NovUnnovTyp = double(Probe_Ind)';
+LeftRightType = double(Action_choice)';
+
+Labels = {LowHighTyp,NovUnnovTyp,LeftRightType};
+LabelsName = {'LowHighTyp','NovUnnovTyp','LeftRightType'};
+
+temp_Ind = 1; % ######################   Select  trials that are needed:  1:AllTri    2:MisExcl   3:ProbTri   4:NonProbTri
+
+temp_Type = 1;% ############   Select  labels that are needed:  1:LowHighTyp    2:NovUnnovTyp   3:LeftRightType   
+%% 
+UseRaw = 0; % 0: use smooth mean   1 :use the raw data
+LabelType = Labels{temp_Type}(Trials{temp_Ind});
+StartT = tic;
+for nROI = 1:nROIs
+    tic
+    CaSigMeanT=zeros(length(Trials{temp_Ind}),1);
+    CaSigMeanA=zeros(length(Trials{temp_Ind}),1);
+    parfor FrT = 1:length_frames_T
+        if ~UseRaw 
+%             CaSigMeanT(:,1) = CaSigMean_Tone{nROI}(temp_Ind,FrT);
+%             ROCout1{nROI}(FrT) = ZL_roc_v1([CaSigMean_Tone{nROI}(temp_Ind,FrT),LabelType],0,0.05,0);
+            ROCout1_temp(FrT) = ZL_roc_v1([CaSigMean_Tone{nROI}(Trials{temp_Ind},FrT),LabelType],0,0.05,0);
+        else
+%             CaSigMeanT(:,1) = CaSigAlineTone{nROI}(temp_Ind,FrT);
+            ROCout1_temp(FrT) = ZL_roc_v1([CaSigAlineTone{nROI}(Trials{temp_Ind},FrT),LabelType],0,0.05,0);
+        end
+%         ROCout1{nROI}(FrT) = ZL_roc_v1([CaSigMeanT,LabelType],0,0.05,0);
+    end
+    ROCout1{nROI} = ROCout1_temp;
+    parfor FrA = 1:length_frames_A
+        if ~UseRaw
+%             CaSigMeanT(:,1) = CaSigMean_Act{nROI}(temp_Ind,FrA);
+%             ROCout2{nROI}(FrA) = ZL_roc_v1([CaSigMean_Act{nROI}(temp_Ind,FrA),LabelType],0,0.05,0);
+            ROCout2_temp(FrA) = ZL_roc_v1([CaSigMean_Act{nROI}(Trials{temp_Ind},FrA),LabelType],0,0.05,0);
+        else
+%             CaSigMeanT(:,1) = CaSigAlineAct{nROI}(temp_Ind,FrA);
+            ROCout2_temp(FrA) = ZL_roc_v1([CaSigAlineAct{nROI}(Trials{temp_Ind},FrA),LabelType],0,0.05,0);
+        end
+%         ROCout2{nROI}(FrA) = ZL_roc_v1([CaSigMeanT,LabelType],0,0.05,0);
+    end    
+    ROCout2{nROI} = ROCout2_temp;
+    toc
+end
+toc(StartT);
+%%
+if UseRaw == 0
+    ROCout.(['MeanT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]) = ROCout1;
+    ROCout.(['MeanA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))])  = ROCout2;
+else
+    ROCout.(['RawT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]) = ROCout1;
+    ROCout.(['RawA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))])  = ROCout2;    
+end
+save(fn,'ROCout','-append');
+%% Plotting
+plot_data = ROCout.MeanT_ROCout_AllTri_LowHighTyp;
+length_frames_T = AlineCaSigData.length_frames_T;
+Z_Val_1(1:length(plot_data{1}(1).xfit),1) = 1;
+Z_Val_2(1:length(plot_data{1}(1).xr),1) = 1;
+Col = [flipud(ROCColorMap);ROCColorMap];
+% Col = [ROCColorMap;flipud(ROCColorMap)];
+fig = figure;hold on;
+set(gcf,'color','w','position',[2000 100 500 400]);
+for nROI = 1%:nROIs
+    for FrT = 1:length_frames_T
+        plot3(plot_data{nROI}(FrT).xr,plot_data{nROI}(FrT).yr,Z_Val_2*FrT,...
+            'color',Col(round(plot_data{nROI}(FrT).AUC*length(Col(:,1))),:));
+% plot3(plot_data{nROI}(FrT).yr,plot_data{nROI}(FrT).xr,Z_Val_2*FrT,...
+%             'color',Col(round(plot_data{nROI}(FrT).AUC*length(Col(:,1))),:));
+    end
+end
+colormap(ROCColorMap);
+set(gca,'clim',[0.5 1]);
+xlabel('FPR');
+ylabel('TPR');
+zlabel('T(s)');
+view(-170,40);
+zlim([1 length_frames_T]);
+
+
+
+
+
+
