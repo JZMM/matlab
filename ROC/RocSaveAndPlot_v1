@@ -40,13 +40,14 @@ TrialsName = {'AllTri','MisExcl','ProbTri','NonProbTri'};
 LowHighTyp = double(Trial_type)';        % Define Label: 0 and 1
 NovUnnovTyp = double(Probe_Ind)';
 LeftRightType = double(Action_choice)';
+MisNonMisType = double(Miss_Ind)';
 
-Labels = {LowHighTyp,NovUnnovTyp,LeftRightType};
-LabelsName = {'LowHighTyp','NovUnnovTyp','LeftRightType'};
+Labels = {LowHighTyp,NovUnnovTyp,LeftRightType,MisNonMisType};
+LabelsName = {'LowHighTyp','NovUnnovTyp','LeftRightType','MisNonMis'};
 
-temp_Ind = 1; % ######################   Select  trials that are needed:  1:AllTri    2:MisExcl   3:ProbTri   4:NonProbTri
+temp_Ind = 2; % ######################   Select  trials that are needed:  1:AllTri    2:MisExcl   3:ProbTri   4:NonProbTri
 
-temp_Type = 1;% ############   Select  labels that are needed:  1:LowHighTyp    2:NovUnnovTyp   3:LeftRightType   
+temp_Type = 3;% ############   Select  labels that are needed:  1:LowHighTyp    2:NovUnnovTyp   3:LeftRightType   
 %% 
 UseRaw = 0; % 0: use smooth mean   1 :use the raw data
 LabelType = Labels{temp_Type}(Trials{temp_Ind});
@@ -90,32 +91,133 @@ else
     ROCout.(['RawT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]) = ROCout1;
     ROCout.(['RawA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))])  = ROCout2;    
 end
-save(fn,'ROCout','-append');
-%% Plotting
-plot_data = ROCout.MeanT_ROCout_AllTri_LowHighTyp;
-length_frames_T = AlineCaSigData.length_frames_T;
+save([fn(8:19) '_ROCout'],'ROCout');
+% save([fn(8:19) '_ROCout'],'ROCout','-append');
+%% Plotting of AllTri_LowHighTyp
+fn = 'dff_ZL_h37_20161113_fied1_d167_3x'; 
+AlineType = 0;  % 0: aline to tone   1:aline to choice  ########################
+UseRawData = 0;  % 0: Use smooth Mean data   1:Use un mean data  ########################
+temp_Ind = 1; %   1:AllTri    2:MisExcl   3:ProbTri   4:NonProbTri
+temp_Type = 2;%   1:LowHighTyp    2:NovUnnovTyp   3:LeftRightType 4:MisNonMis
+savefig = 0; % 0: don't save 1: save the fig
+savetoPPT = 0; % 0: don't save 1: save to PPT
+
+TrialsName = {'AllTri','MisExcl','ProbTri','NonProbTri'};
+LabelsName = {'LowHighTyp','NovUnnovTyp','LeftRightType','MisNonMis'};
+
+if ~exist(['ROC_plot']);
+    mkdir(['ROC_plot']);    
+end 
+cd (['ROC_plot']);
+DirName = ['ROC_' LabelsName{temp_Type}];
+if ~exist(DirName);
+    mkdir(DirName);
+end  
+cd(DirName);
+SavePath = pwd; 
+cd ..   
+cd ..
+if AlineType == 0
+    if UseRawData == 0
+        plot_data = ROCout.(['MeanT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);    
+        if ~exist(['MeanT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
+            DirName = ['MeanT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))];          
+        end
+    else
+        plot_data = ROCout.(['RawT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
+        if ~exist(['RawT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
+            DirName = ['RawT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))];            
+        end          
+    end
+    Frame_length = AlineCaSigData.length_frames_T;
+    OriginPoint = MinOnsFrame;
+else
+    if UseRawData == 0
+        plot_data = ROCout.(['MeanA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
+        if ~exist(['MeanA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
+            DirName = ['MeanA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))];          
+        end        
+    else
+        plot_data = ROCout.(['RawA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]); 
+        if ~exist(['RawA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
+            DirName = ['RawA _ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))];            
+        end        
+    end 
+    Frame_length = AlineCaSigData.length_frames_A;
+    OriginPoint = MinActFrame;
+end
+%
 Z_Val_1(1:length(plot_data{1}(1).xfit),1) = 1;
 Z_Val_2(1:length(plot_data{1}(1).xr),1) = 1;
 Col = [flipud(ROCColorMap);ROCColorMap];
+
 % Col = [ROCColorMap;flipud(ROCColorMap)];
-fig = figure;hold on;
-set(gcf,'color','w','position',[2000 100 500 400]);
-for nROI = 1%:nROIs
-    for FrT = 1:length_frames_T
+
+for nROI = 29%:4%:20%:nROIs
+    fig = figure;hold on;
+    set(gcf,'color','w','position',[2000 100 500 400]);
+    for FrT = 1:Frame_length
         plot3(plot_data{nROI}(FrT).xr,plot_data{nROI}(FrT).yr,Z_Val_2*FrT,...
-            'color',Col(round(plot_data{nROI}(FrT).AUC*length(Col(:,1))),:));
+            'color',Col(round(plot_data{nROI}(FrT).AUC*length(Col(:,1))),:),'linewidth',1);
 % plot3(plot_data{nROI}(FrT).yr,plot_data{nROI}(FrT).xr,Z_Val_2*FrT,...
 %             'color',Col(round(plot_data{nROI}(FrT).AUC*length(Col(:,1))),:));
     end
+    colormap(ROCColorMap);
+    colorbar('position',[.85 .15 .05 .6]);
+    line([0.5 0.5],[1 1],[1 Frame_length],'color',[.8 .8 .8]);
+    AllAucVal = arrayfun(@(x) x.AUC, plot_data{nROI});
+    SE = arrayfun(@(x) x.SE, plot_data{nROI});
+    plot3(AllAucVal,ones(1,Frame_length),1:Frame_length,'color',[.6 .2 0],'linewidth',3);
+    SEvalue = [AllAucVal+SE fliplr(AllAucVal-SE)];
+    patch(SEvalue,ones(1,2*Frame_length),[1:Frame_length fliplr(1:Frame_length)],[.6 .2 0]);
+    patch([0 1 1 0],[0 1 1 0],[0 0 Frame_length Frame_length],[.7 .7 .7],'edgecolor','w');
+    alpha .4
+    line([0 1],[1 1],[Frame_length Frame_length],'color',[.8 .8 .8]);
+    line([0 1],[1 1],[OriginPoint OriginPoint],'linestyle','--','color',[.8 .8 .8],'linewidth',2);
+    if AlineType
+        text(0.3,1,double(OriginPoint)+15,'Choice onset','fontweight','bold');
+    else
+        text(0.3,1,double(OriginPoint)+15,'Tone onset','fontweight','bold');
+    end
+    text(1,0.2,Frame_length,['Max AUC Value = ' num2str(max(AllAucVal))],'fontweight','bold');
+    set(gca,'clim',[0.5 1],'ztick',[double(OriginPoint):1000/FrameTime:Frame_length],'zticklabel',[0:1:10],...
+        'position',[.15 .15 .55 .7],'fontweight','bold','fontsize',12);
+    xlabel('FPR/AUC');
+    ylabel('TPR');
+    zlabel('T(s)');
+    view(-180,50);
+    zlim([1 Frame_length]);
+    xlim([0 1]);
+    if AlineType == 0
+        if UseRawData == 0
+            title ({['ROI-' num2str(nROI) ' AUC/ROC Across Tone Onset(mean)'];...
+                [cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]},'interpreter','none' );
+            if savefig 
+                saveas(fig,[SavePath '/' fn(8:19) '_ROI-' num2str(nROI) '_AUC_Mean' TrialsName{temp_Ind}(1:3) LabelsName{temp_Type}(1:3) '.fig']);       
+            end
+        else
+            title ({['ROI-' num2str(nROI) ' AUC/ROC Across Tone Onset(raw) '];...
+                [cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]},'interpreter','none' );
+            if savefig 
+                saveas(fig,[SavePath '/' fn(8:19) '_ROI-' num2str(nROI) '_AUC_Raw' TrialsName{temp_Ind}(1:3) LabelsName{temp_Type}(1:3) '.fig']);        
+            end            
+        end
+    else
+        if UseRawData == 0
+            title ({['ROI-' num2str(nROI) ' AUC/ROC Across Choice Onset(mean) '];...
+                [cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]},'interpreter','none' );
+            if savefig 
+                saveas(fig,[SavePath '/' fn(8:19) '_ROI-' num2str(nROI) '_AUC_Mean' TrialsName{temp_Ind}(1:3) LabelsName{temp_Type}(1:3) '.fig']);        
+            end            
+        else
+            title ({['ROI-' num2str(nROI) ' AUC/ROC Across Choice Onset(raw) '];...
+                [cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]},'interpreter','none' );
+            if savefig 
+                saveas(fig,[SavePath '/' fn(8:19) '_ROI-' num2str(nROI) '_AUC_Raw' TrialsName{temp_Ind}(1:3) LabelsName{temp_Type}(1:3) '.fig']);        
+            end             
+        end
+    end    
 end
-colormap(ROCColorMap);
-set(gca,'clim',[0.5 1]);
-xlabel('FPR');
-ylabel('TPR');
-zlabel('T(s)');
-view(-170,40);
-zlim([1 length_frames_T]);
-
 
 
 
