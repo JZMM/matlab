@@ -1,0 +1,156 @@
+temp1 = ROCout.MeanT_ROCout_AllTri_NovUnnovTyp;
+for nROI = 1:102
+    AllAucVal = arrayfun(@(x) x.AUC, temp1{nROI});
+    MaxAllNovUnnov(nROI) = max(AllAucVal);
+end
+temp2 = ROCout.MeanT_ROCout_AllTri_LowHighTyp;
+for nROI = 1:102
+    AllAucVal = arrayfun(@(x) x.AUC, temp2{nROI});
+    MaxAllLowHign(nROI) = max(AllAucVal);
+end
+% temp3 = ROCout.MeanA_ROCout_MisExcl_LeftRightType;
+temp3 = ROCout.MeanT_ROCout_MisExcl_LeftRightType;
+for nROI = 1:102
+    AllAucVal = arrayfun(@(x) x.AUC, temp3{nROI});
+    MaxMisLeftRight(nROI) = max(AllAucVal);
+end
+%%  AUC more than 0.6
+figure;hold on;
+for nROI = 1:nROIs
+    if MaxAllLowHign(nROI)>0.6
+        PL1 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),100,'k','filled');
+    end
+    if MaxMisLeftRight(nROI)>0.6
+        PL2 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),50,'r','filled');
+    end  
+    if MaxAllNovUnnov(nROI)>0.6
+        PL3 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),20,'y','filled');
+    end   
+    if MaxAllLowHign(nROI)<0.6 & MaxMisLeftRight(nROI)<0.6 & MaxAllNovUnnov(nROI)<0.6
+        PL4 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),50,'b','filled');
+    end
+end
+% alpha .5
+xlabel('Hign and Low Frequecy');
+ylabel('Left and Right Choice');
+zlabel('Novel and unNovel');
+legend([PL1,PL2,PL3,PL4],{'Frequency','Choice','Novel','None'});
+axis('square')
+xlim([.5 1]);
+ylim([.5 1]);
+zlim([.5 1]);
+set(gca,'position',[0.1 0.2 0.7 0.7]);
+% patch([.5 .5 .5 .5],[])
+view(3);
+%%  AUC more than 0.65
+figure;hold on;
+for nROI = 1:nROIs
+    if MaxAllLowHign(nROI)>0.65
+        PL1 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),100,'k','filled');
+    end
+    if MaxMisLeftRight(nROI)>0.65
+        PL2 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),50,'r','filled');
+    end  
+    if MaxAllNovUnnov(nROI)>0.65
+        PL3 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),20,'y','filled');
+    end   
+    if MaxAllLowHign(nROI)<0.65 & MaxMisLeftRight(nROI)<0.65 & MaxAllNovUnnov(nROI)<0.65
+        PL4 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),50,'b','filled');
+    end
+end
+% alpha .5
+xlabel('Hign and Low Frequecy');
+ylabel('Left and Right Choice');
+zlabel('Novel and unNovel');
+legend([PL1,PL2,PL3,PL4],{'Frequency','Choice','Novel','None'});
+axis('square')
+xlim([.5 1]);
+ylim([.5 1]);
+zlim([.5 1]);
+set(gca,'position',[0.1 0.2 0.7 0.7]);
+% patch([.5 .5 .5 .5],[])
+view(3);
+%%  AUC more than 0.7
+figure;hold on;
+for nROI = 1:nROIs
+    if MaxAllLowHign(nROI)>0.7
+        PL1 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),100,'k','filled');
+    end
+    if MaxMisLeftRight(nROI)>0.7
+        PL2 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),50,'r','filled');
+    end
+    if MaxAllNovUnnov(nROI)>0.7
+        PL3 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),20,'y','filled');
+    end
+    if MaxAllLowHign(nROI)<0.7 & MaxMisLeftRight(nROI)<0.7 & MaxAllNovUnnov(nROI)<0.7
+        PL4 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),50,'b','filled');
+    end
+end
+% alpha .5
+xlabel('Hign and Low Frequecy');
+ylabel('Left and Right Choice');
+zlabel('Novel and unNovel');
+legend([PL1,PL2,PL3,PL4],{'Frequency','Choice','Novel','None'});
+axis('square')
+xlim([.5 1]);
+ylim([.5 1]);
+zlim([.5 1]);
+set(gca,'position',[0.1 0.2 0.7 0.7]);
+% patch([.5 .5 .5 .5],[])
+view(3);
+%%  AUC more than 0.8
+figure;hold on;
+for nROI = 1:nROIs
+    if MaxAllLowHign(nROI)>0.8
+        PL1 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),100,'k','filled');
+    end
+    if MaxMisLeftRight(nROI)>0.8
+        PL2 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),50,'r','filled');
+    end
+    if MaxAllNovUnnov(nROI)>0.8
+        PL3 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),20,'y','filled');
+    end
+    if MaxAllLowHign(nROI)<0.8 & MaxMisLeftRight(nROI)<0.8 & MaxAllNovUnnov(nROI)<0.8
+        PL4 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),50,'b','filled');
+    end
+end
+% alpha .5
+xlabel('Hign and Low Frequecy');
+ylabel('Left and Right Choice');
+zlabel('Novel and unNovel');
+legend([PL1,PL2,PL3,PL4],{'Frequency','Choice','Novel','None'});
+axis('square')
+xlim([.5 1]);
+ylim([.5 1]);
+zlim([.5 1]);
+set(gca,'position',[0.1 0.2 0.7 0.7]);
+% patch([.5 .5 .5 .5],[])
+view(3);
+%%  AUC more than 0.9
+figure;hold on;
+for nROI = 1:nROIs
+    if MaxAllLowHign(nROI)>0.9
+        PL1 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),100,'k','filled');
+    end
+    if MaxMisLeftRight(nROI)>0.9
+        PL2 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),50,'r','filled');
+    end
+    if MaxAllNovUnnov(nROI)>0.9
+        PL3 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),20,'y','filled');
+    end
+    if MaxAllLowHign(nROI)<0.9 & MaxMisLeftRight(nROI)<0.9 & MaxAllNovUnnov(nROI)<0.9
+        PL4 = scatter3(MaxAllLowHign(nROI),MaxMisLeftRight(nROI),MaxAllNovUnnov(nROI),50,'b','filled');
+    end
+end
+% alpha .5
+xlabel('Hign and Low Frequecy');
+ylabel('Left and Right Choice');
+zlabel('Novel and unNovel');
+legend([PL1,PL2,PL3,PL4],{'Frequency','Choice','Novel','None'});
+axis('square')
+xlim([.5 1]);
+ylim([.5 1]);
+zlim([.5 1]);
+set(gca,'position',[0.1 0.2 0.7 0.7]);
+% patch([.5 .5 .5 .5],[])
+view(3);
