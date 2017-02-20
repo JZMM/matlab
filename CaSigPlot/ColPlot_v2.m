@@ -35,7 +35,7 @@ Trials_sum(1,:) = sum(TrialType(1:8,:)');
 Trials_sum(2,:) = sum(TrialType(9:16,:)');
 Trials_sum(3,:) = sum(TrialType(17:24,:)');
 blank_val = round(sum(Trials_sum)/15);
-
+ 
 Y_step(1,:) =  Trials_sum(1,:) + blank_val;
 Y_step(2,:) =  Y_step(1,:) + Trials_sum(2,:);
 Y_step(3,:) =  Y_step(2,:) + blank_val;
