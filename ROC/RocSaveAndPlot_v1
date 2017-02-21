@@ -115,8 +115,8 @@ end
 fn = 'dff_ZL_h37_20161113_fied1_d167_3x';  %% use dff filename
 AlineType = 0;  % 0: aline to tone   1:aline to choice  ########################
 UseRawData = 0;  % 0: Use smooth Mean data   1:Use un mean data  ########################
-temp_Ind = 1; %   1:AllTri    2:MisExcl   3:ProbTri   4:NonProbTri
-temp_Type = 4;%   1:LowHighTyp    2:NovUnnovTyp   3:LeftRightType 4:MisNonMis
+temp_Ind = 2; %   1:AllTri    2:MisExcl   3:ProbTri   4:NonProbTri
+temp_Type = 3;%   1:LowHighTyp    2:NovUnnovTyp   3:LeftRightType 4:MisNonMis
 savefig = 1; % 0: don't save 1: save the fig
 savePNG = 1; % 0: don't save 1: save to PPT
 
@@ -165,7 +165,7 @@ else
     OriginPoint = MinActFrame;
 end
 %
-Z_Val_1(1:length(plot_data{1}(1).xfit),1) = 1;
+% Z_Val_1(1:length(plot_data{1}(1).xfit),1) = 1;
 Z_Val_2(1:length(plot_data{1}(1).xr),1) = 1;
 Col = [flipud(ROCColorMap);ROCColorMap];
 % plotting
@@ -182,15 +182,18 @@ end
 subplot(1,2,1);
 imagesc(AllAucVal(inds1,:));
 colormap jet;
+line([MinOnsFrame MinOnsFrame],[1 Frame_length],'color','w','linewidth',2);
 title('Sort in early');
 ylabel('Number of Neurons');
 xlabel('Time(s)');
 set(gca,'clim',[.4 .9],'xtick',[double(OriginPoint):1000/FrameTime:Frame_length],'xticklabel',[0:1:10],'fontweight','bold','fontsize',12,...
     'position',[0.1 0.2 0.3 0.6]);
+text(-20,112,'Stim Onset');
 
 subplot(1,2,2);
 imagesc(AllAucVal(inds2,:))
 colormap jet;
+line([MinOnsFrame MinOnsFrame],[1 Frame_length],'color','w','linewidth',2);
 
 title('Sort in late');
 xlabel('Time(s)');
