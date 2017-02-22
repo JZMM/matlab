@@ -1,4 +1,6 @@
-fn = 'dff_ZL_h37_20161114_fied1_d167_3x';       %#####################################################
+% ######## block 1 #########
+% get aline calsig data
+fn = 'dff_ZL_h37_20161115_fied1_d230_3x';       %#####################################################
 load(fn);
 temp = dff_subtr_preSoundmean;   % dff_subtr_preSoundmean  dff_prctileF0  dff_meanF0   #####################################################
 SmoothBand = 11;
@@ -25,7 +27,13 @@ AlineCaSigData.CaSigMean_Act = CaSigMean_Act;
 AlineCaSigData.length_frames_T = length_frames_T;
 AlineCaSigData.length_frames_A = length_frames_A;
 save(fn,'AlineCaSigData','-append');
-%% find index
+%% ######## block 2 #########
+% set trials type want to test
+
+temp_Ind = 1; % ######################   Select  trials that are needed:  1:AllTri    2:MisExcl   3:ProbTri   4:NonProbTri
+temp_Type = 1;% ############   Select  labels that are needed:  1:LowHighTyp    2:NovUnnovTyp   3:LeftRightType   
+UseRaw = 0; % 0: use smooth mean   1 :use the raw data 
+
 CaSigAlineTone = AlineCaSigData.CaSigAlineTone;
 CaSigMean_Tone = AlineCaSigData.CaSigMean_Tone;
 CaSigAlineAct = AlineCaSigData.CaSigAlineAct;
@@ -45,20 +53,14 @@ NovUnnovTyp = double(Probe_Ind)';
 LeftRightType = double(Action_choice)';
 MisNonMisType = double(Miss_Ind)';
 
-Labels = {LowHighTyp,NovUnnovTyp,LeftRightType,MisNonMisType};
-LabelsName = {'LowHighTyp','NovUnnovTyp','LeftRightType','MisNonMis'};
-
-temp_Ind = 1; % ######################   Select  trials that are needed:  1:AllTri    2:MisExcl   3:ProbTri   4:NonProbTri
-
-temp_Type = 1;% ############   Select  labels that are needed:  1:LowHighTyp    2:NovUnnovTyp   3:LeftRightType   
-%% 
-UseRaw = 0; % 0: use smooth mean   1 :use the raw data
+Labels = {LowHighTyp,NovUnnovTyp,LeftRightType,MisNonMisType};   % ##################
+LabelsName = {'LowHighTyp','NovUnnovTyp','LeftRightType','MisNonMis'};   % ##################
 LabelType = Labels{temp_Type}(Trials{temp_Ind});
+AnswFram = AnswFramAlineByTone(Trials{temp_Ind});
+%% ######## block 3 #########
+% get all neuron's AUC/ROC
 StartT = tic;
-for nROI = 1:nROIs
-    tic
-    CaSigMeanT=zeros(length(Trials{temp_Ind}),1);
-    CaSigMeanA=zeros(length(Trials{temp_Ind}),1);
+for nROI = 1:nROIs  % for tone aline data
     parfor FrT = 1:length_frames_T
         if ~UseRaw 
             ROCout1_temp(FrT) = ZL_roc_v1([CaSigMean_Tone{nROI}(Trials{temp_Ind},FrT),LabelType],0,0.05,0);
@@ -67,6 +69,15 @@ for nROI = 1:nROIs
         end
     end
     ROCout1{nROI} = ROCout1_temp;    
+    disp(nROI);
+end
+toc(StartT);
+if UseRaw == 0
+    ROCout.(['MeanT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]) = ROCout1;
+else
+    ROCout.(['RawT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]) = ROCout1;   
+end
+for nROI = 1:nROIs   % for choice aline data
     parfor FrA = 1:length_frames_A
         if ~UseRaw
             ROCout2_temp(FrA) = ZL_roc_v1([CaSigMean_Act{nROI}(Trials{temp_Ind},FrA),LabelType],0,0.05,0);
@@ -75,12 +86,70 @@ for nROI = 1:nROIs
         end
     end    
     ROCout2{nROI} = ROCout2_temp;   
-    toc
+    disp(nROI)
 end
 toc(StartT);
-%%
+if UseRaw == 0
+    ROCout.(['MeanA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))])  = ROCout2;
+else
+    ROCout.(['RawA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))])  = ROCout2;    
+end
+%%  ######## block 4 #########
+% get the max AUC frame's significant threshold
+AucTone = ROCout.MeanT_ROCout_AllTri_NovUnnovTyp;
+AucAct = ROCout.MeanA_ROCout_AllTri_NovUnnovTyp;
+for nROI = 1:nROIs % for tone aline data
+    AllAucVal_T = arrayfun(@(x) x.AUC, AucTone{nROI});
+    T_ind = find(AllAucVal_T == max(AllAucVal_T));
+    TMaxAUCFrame(nROI) = T_ind;    
+    [AllROC,~,sigvalue]=ROCSiglevelGene([CaSigMean_Tone{nROI}(Trials{temp_Ind},T_ind),LabelType],500,1,0.01);  % use shuffle data to get threshold
+    ToneRocShuffThresh(nROI) = sigvalue; 
+    disp(nROI);
+end
+if UseRaw == 0
+    ROCout.(['Mean_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_ShufThre'])(1,:) = ToneRocShuffThresh;
+    ROCout.(['Mean_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_MaxInd'])(1,:) = TMaxAUCFrame;
+else  
+    ROCout.(['Raw_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_ShufThre'])(1,:) = ToneRocShuffThresh;
+    ROCout.(['Raw_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_MaxInd'])(1,:) = TMaxAUCFrame;
+end
+for nROI = 1:nROIs % for choice aline data
+    AllAucVal_A = arrayfun(@(x) x.AUC, AucAct{nROI});  
+    A_ind = find(AllAucVal_A == max(AllAucVal_A));
+    AMaxAUCFrame(nROI) = A_ind;
+    [AllROC,~,sigvalue]=ROCSiglevelGene([CaSigMean_Act{nROI}(Trials{temp_Ind},A_ind),LabelType],500,1,0.01);  % use shuffle data to get threshold
+    ActRocShuffThresh(nROI) = sigvalue;
+    disp(nROI);
+end
+if UseRaw == 0
+    ROCout.(['Mean_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_ShufThre'])(2,:) = ActRocShuffThresh;
+    ROCout.(['Mean_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_MaxInd'])(2,:) = AMaxAUCFrame;
+else  
+    ROCout.(['Raw_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_ShufThre'])(1,:) = ActRocShuffThresh;
+    ROCout.(['Raw_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_MaxInd'])(1,:) = AMaxAUCFrame;
+end
+%% ######## block 3 #########
+% get all neuron's AUC/ROC  and the max AUC frame's significant threshold
+% at the same time
+StartT = tic;
 for nROI = 1:nROIs
     tic
+    parfor FrT = 1:length_frames_T
+        if ~UseRaw 
+            ROCout1_temp(FrT) = ZL_roc_v1([CaSigMean_Tone{nROI}(Trials{temp_Ind},FrT),LabelType],0,0.05,0);
+            if FrT <= length_frames_A
+                ROCout2_temp(FrT) = ZL_roc_v1([CaSigMean_Act{nROI}(Trials{temp_Ind},FrT),LabelType],0,0.05,0);
+            end
+        else
+            ROCout1_temp(FrT) = ZL_roc_v1([CaSigAlineTone{nROI}(Trials{temp_Ind},FrT),LabelType],0,0.05,0);
+            if FrT <= length_frames_A
+               ROCout2_temp(FrT) = ZL_roc_v1([CaSigAlineAct{nROI}(Trials{temp_Ind},FrT),LabelType],0,0.05,0); 
+            end
+        end
+    end 
+    ROCout1{nROI} = ROCout1_temp; 
+    ROCout2{nROI} = ROCout2_temp;   
+    
     AllAucVal_T = arrayfun(@(x) x.AUC, ROCout1{nROI});
     AllAucVal_A = arrayfun(@(x) x.AUC, ROCout2{nROI});
     T_ind = find(AllAucVal_T == max(AllAucVal_T));
@@ -91,8 +160,12 @@ for nROI = 1:nROIs
     ToneRocShuffThresh(nROI) = sigvalue; 
     [AllROC,~,sigvalue]=ROCSiglevelGene([CaSigAlineAct{nROI}(Trials{temp_Ind},A_ind),LabelType],500,1,0.01);  % use shuffle data to get threshold
     ActRocShuffThresh(nROI) = sigvalue;
+       
     toc
+    disp(num2str(nROI));
 end
+toc(StartT);
+
 %%
 if UseRaw == 0
     ROCout.(['MeanT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]) = ROCout1;
@@ -109,11 +182,12 @@ end
 save([fn(8:19) '_ROCout'],'ROCout');
 % save([fn(8:19) '_ROCout'],'ROCout','-append');
 %% Plotting of AllTri_LowHighTyp
-fn = 'dff_ZL_h37_20161114_fied1_d167_3x';  %% use dff filename
+fn = 'dff_ZL_h37_20161113_field1_d167_3x_Same_ROI_for_2nd_of_3_consecutive_days';  %% use dff filename
+% load(fn);
 AlineType = 0;  % 0: aline to tone   1:aline to choice  ########################
 UseRawData = 0;  % 0: Use smooth Mean data   1:Use un mean data  ########################
-temp_Ind = 1; %   1:AllTri    2:MisExcl   3:ProbTri   4:NonProbTri
-temp_Type = 1;%   1:LowHighTyp    2:NovUnnovTyp   3:LeftRightType 4:MisNonMis
+temp_Ind = 2; %   1:AllTri    2:MisExcl   3:ProbTri   4:NonProbTri
+temp_Type = 3;%   1:LowHighTyp    2:NovUnnovTyp   3:LeftRightType 4:MisNonMis
 savefig = 1; % 0: don't save 1: save the fig
 savePNG = 1; % 0: don't save 1: save to PPT
 
@@ -136,33 +210,33 @@ if AlineType == 0
     if UseRawData == 0
         plot_data = ROCout.(['MeanT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);  
         AUC_ShufThre = ROCout.(['Mean_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_ShufThre'])(1,:);
-        MaxAUC = ROCout.(['Mean_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_MaxInd'])(1,:);
+        MaxAUCInd = ROCout.(['Mean_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_MaxInd'])(1,:);
         if ~exist(['MeanT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
             DirName = ['MeanT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))];          
         end
     else
         plot_data = ROCout.(['RawT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
         AUC_ShufThre = ROCout.(['Raw_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_ShufThre'])(1,:);
-        MaxAUC = ROCout.(['Raw_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_MaxInd'])(1,:);
+        MaxAUCInd = ROCout.(['Raw_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_MaxInd'])(1,:);
         if ~exist(['RawT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
             DirName = ['RawT_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))];            
         end          
     end
     Frame_length = AlineCaSigData.length_frames_T;
     OriginPoint = double(MinOnsFrame);
-    OnsetMark = 'Stim'
+    OnsetMark = 'Stim';
 else
     if UseRawData == 0
         plot_data = ROCout.(['MeanA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
         AUC_ShufThre = ROCout.(['Mean_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_ShufThre'])(2,:);
-        MaxAUC = ROCout.(['Mean_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_MaxInd'])(2,:);
+        MaxAUCInd = ROCout.(['Mean_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_MaxInd'])(2,:);
         if ~exist(['MeanA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
             DirName = ['MeanA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))];          
         end        
     else
         plot_data = ROCout.(['RawA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
         AUC_ShufThre = ROCout.(['Raw_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_ShufThre'])(2,:);
-        MaxAUC = ROCout.(['Raw_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_MaxInd'])(2,:);
+        MaxAUCInd = ROCout.(['Raw_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type)) '_MaxInd'])(2,:);
         if ~exist(['RawA_ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))]);
             DirName = ['RawA _ROCout_' cell2mat(TrialsName(temp_Ind)) '_' cell2mat(LabelsName(temp_Type))];            
         end        
@@ -177,25 +251,25 @@ Z_Val_2(1:length(plot_data{1}(1).xr),1) = 1;
 % Col = [flipud(ROCColorMap);ROCColorMap];
 for nROI = 1:nROIs
     AllAucVal(nROI,:) = arrayfun(@(x) x.AUC, plot_data{nROI});
+    MaxAUCVal(nROI) = max(AllAucVal(nROI,:));
 end
 % plotting
 fig = figure;hold on;
 set(gcf,'color','w','position',[2000 100 400 600]);
 
 
-[MaxAUCSort, inds1] = sort(MaxAUC);
+[MaxAUCSort, inds1] = sort(MaxAUCVal);
 SigAUC = find(MaxAUCSort > AUC_ShufThre(inds1));
-
+MaxAUCIndSort = MaxAUCInd(inds1);
 % subplot(1,2,1);
 hold on;
 imagesc(AllAucVal(inds1,:));
 colormap jet;
 line([OriginPoint OriginPoint],[1 Frame_length],'color','w','linewidth',2);
-if AlineType 
-    plot(MaxAUCSort(SigAUC),SigAUC,'k.');
-else
-    plot(MaxAUCSort(SigAUC),SigAUC,'k.');
-end
+% if ~AlineType 
+%     plot(AnswFram(inds1),[1:Frame_length],'w.');  
+% end
+plot(MaxAUCIndSort(SigAUC),SigAUC,'k.');
 % title('Sort in early');
 ylabel('Number of Neurons');
 xlabel('Time(s)');
