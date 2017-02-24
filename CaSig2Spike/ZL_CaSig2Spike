@@ -1,0 +1,76 @@
+%%
+temp_data = zeros(TrialN,nROIs,Frames);
+for nROI = 1:nROIs
+    temp_data(:,nROI,:) = dff_prctileF0{nROI};   % dff_subtr_preSoundmean   dff_prctileF0 
+end                                                       % dff_meanF0               fraw_corr_trials   
+
+%%
+V.est_lam = 1;
+V.est_sig = 1;
+
+[nTrials,nROIs,nF] = size(temp_data);
+V.Ncells = 1;
+V.T = nF;
+V.Npixels = 1;
+V.dt = FrameTime/1000;
+P.lam = 10;
+
+nSpikes = zeros(nTrials,nROIs,nF);
+ROIstd = zeros(nROIs,1);
+for nROI = 1:nROIs
+    cROIdata = squeeze(temp_data(:,nROI,:)); 
+    temp = [];
+    for tr = 1:nTrials
+        temp =  [temp cROIdata(tr,[1:round(OnsetT(tr)/FrameTime)])];
+    end
+    cStd = std(temp);
+    if isnan(cStd)
+        error('Input data cannot contains nan value.');
+    end
+    P.sig = cStd;    
+    ROIstd(nROI) = cStd;
+    parfor tr = 1:nTrials
+        nTrace = cROIdata(tr,:);
+        nsTrace = smooth(nTrace,11,'rloess');
+%         nsTrace = zscore(nsTrace);
+        [n_best,~,~,~]=fast_oopsi(nsTrace,V,P);
+%         n_best(1:4) = 0;
+%         n_best(n_best < 0.05) = 0;
+        nSpikes(tr,nROI,:) = n_best;
+    end       
+end
+%% save
+Spikes = nSpikes;
+save('dff_ZL_h37_20161113_field1_d167_3x_Same_ROI_for_2nd_of_3_consecutive_days','Spikes','-append');
+%%  Plot and check
+[Trials,ROIs,Frames] = size(nSpikes_unSmooth);
+nROI = 1;
+tr = 16;
+close all;
+Spike_data1 = squeeze(nSpikes_unSmooth(tr,nROI,:));
+Spike_data2 = squeeze(nSpikes_Smooth(tr,nROI,:));
+Raw_data = squeeze(temp_data(tr,nROI,:));
+figure;hold on;set(gcf,'position',[2000 100 800 400]);
+[hax1,plot1,plot2] = plotyy([1:Frames],Spike_data1,[1:Frames],smooth(Raw_data,5),'bar','plot');
+ylabel(hax1(1),'Spikes');
+ylabel(hax1(2),'CaSig trce');
+ylim(hax1(2),[min(Raw_data)-(max(Raw_data)-min(Raw_data))/20 ...
+    max(Raw_data)+(max(Raw_data)-min(Raw_data))/20]);
+xlim(hax1(1),[1 Frames]);
+xlim(hax1(2),[1 Frames]);
+title('UnSmooth');
+figure;hold on;set(gcf,'position',[2000 500 800 400]);
+[hax2,plot3,plot3] = plotyy([1:Frames],Spike_data2,[1:Frames],smooth(Raw_data,5),'bar','plot');
+ylabel(hax2(1),'Spikes');
+ylabel(hax2(2),'CaSig trce');
+ylim(hax2(2),[min(Raw_data)-(max(Raw_data)-min(Raw_data))/20 ...
+    max(Raw_data)+(max(Raw_data)-min(Raw_data))/20]);
+title('Smooth');
+xlim(hax2(1),[1 Frames]);
+xlim(hax2(2),[1 Frames]);
+% plot1 = [.7 .8 .8];
+% plot2.color = 'r';
+
+
+
+
