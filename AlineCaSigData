@@ -1,0 +1,38 @@
+function [  ] = AlineCaSigData( dff_filename,SaveName,varargin )
+%UNTITLED Summary of this function goes here
+%   dff_filename: use dff data
+%   SmoothBand: default is 11
+if isempty(varargin)
+    SmoothBand = 11;
+else
+    SmoothBand = varargin;
+end
+fn = dff_filename;       %#####################################################
+SavingName = ['AlineCaSig_' SaveName];
+load(fn);
+temp = dff_subtr_preSoundmean;   % dff_subtr_preSoundmean  dff_prctileF0  dff_meanF0   #####################################################
+
+
+length_frames_T = length([F_num_T(1,1):F_num_T(1,2)]);
+length_frames_A = length([F_num_A(1,1):F_num_A(1,2)]);
+for nROI = 1:nROIs
+    for triN = 1:TrialN
+        CaSigAlineTone(triN,nROI,:) = temp{nROI}(triN,[F_num_T(triN,1):F_num_T(triN,2)]);  % get the same frames before and after tone onset 
+        CaSigMean_Tone(triN,nROI,:) = smooth(squeeze(CaSigAlineTone(triN,nROI,:)),SmoothBand); % use smooth to get the moving average value
+        if F_num_A(triN,1) <1
+            CaSigAlineAct(triN,nROI,:) = temp{nROI}(triN,[1:F_num_A(triN,2)-F_num_A(triN,1)+1]);
+        else
+            CaSigAlineAct(triN,nROI,:) = temp{nROI}(triN,[F_num_A(triN,1):F_num_A(triN,2)]);  % get the same frames before and after choice 
+        end
+        CaSigMean_Act(triN,nROI,:) = smooth(squeeze(CaSigAlineAct(triN,nROI,:)),SmoothBand); 
+    end    
+end
+AlineCaSigData.CaSigAlineTone = CaSigAlineTone;
+AlineCaSigData.CaSigMean_Tone = CaSigMean_Tone;
+AlineCaSigData.CaSigAlineAct = CaSigAlineAct;
+AlineCaSigData.CaSigMean_Act = CaSigMean_Act;
+AlineCaSigData.length_frames_T = length_frames_T;
+AlineCaSigData.length_frames_A = length_frames_A;
+save(SavingName,'AlineCaSigData','Miss_Ind','Probe_Ind','Trial_type','Action_choice','MinOnsFrame','FrameTime');
+end
+
