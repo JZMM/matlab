@@ -1,0 +1,156 @@
+
+% ######## block 1 #########
+% set trials type want to test
+fn = 'AlineCaSig_h35_20161127';
+SaveName = 'h35_20161127';
+load(fn);
+if exist([SaveName '_ROC.mat'])
+    load([SaveName '_ROC.mat']);
+end
+%%
+Trial_Type = 1; % ######################   Select  trials that are needed:  1:AllTri    2:MisExcl   3:ProbTri   4:NonProbTri 
+              % 5.ProbTriMisExcl 6.NonProbTriMisExcl 7.LowCorrTri
+              % 8.HignCorrTri 9. Corr 10.Wro 11.CorrLow 12.CorrHign
+Choice_Type = 4;% ############   Select  labels that are needed:  1:LowHighTyp    2:NovUnnovTyp   3:LeftRightType   4:MisNonMis
+UseRaw = 0; % 0: use smooth mean   1 :use the raw data 
+AlineType = 0;  % 0: Aline to Tone   1 : Aline to Choice
+
+if ~AlineType
+    if ~UseRaw
+        CaSigAline = AlineCaSigData.CaSigMean_Tone;
+    else
+        CaSigAline = AlineCaSigData.CaSigAlineTone;
+    end
+    FrameLength = AlineCaSigData.length_frames_T;
+else
+    if ~UseRaw
+        CaSigAline = AlineCaSigData.CaSigMean_Act;
+    else
+        CaSigAline = AlineCaSigData.CaSigAlineAct;
+    end
+    FrameLength = AlineCaSigData.length_frames_A;
+end
+
+
+AllTri = [1:size(CaSigAline,1)];            % Define trials that are used
+MisExcl = find(Miss_Ind==0);
+ProbTri = find(Probe_Ind==1);
+NonProbTri = find(Probe_Ind==0);
+ProbTriMisExcl = find(~Miss_Ind & Probe_Ind);
+NonProbTriMisExcl = find(~Miss_Ind & ~Probe_Ind);
+LowCorrTri = find(Trial_type == 0 & Action_choice == Trial_type);
+HignCorrTri = find(Trial_type == 1 & Action_choice == Trial_type);
+Trials = {AllTri,MisExcl,ProbTri,NonProbTri,ProbTriMisExcl,NonProbTriMisExcl,LowCorrTri,HignCorrTri};
+TrialsName = {'AllTri','MisExcl','ProbTri','NonProbTri','ProbTriMisExcl','NonProbTriMisExcl','LowCorrTri','HignCorrTri'};
+
+LowHighTyp = double(Trial_type)';        % Define Label: 0 and 1
+NovUnnovTyp = double(Probe_Ind)';
+LeftRightType = double(Action_choice)';
+MisNonMisType = double(Miss_Ind)';
+
+Labels = {LowHighTyp,NovUnnovTyp,LeftRightType,MisNonMisType};   % ##################
+LabelsName = {'LowHighTyp','NovUnnovTyp','LeftRightType','MisNonMis'};   % ##################
+
+LabelType = Labels{Choice_Type}(Trials{Trial_Type});
+if exist('ROCout')
+    if isfield(ROCout,['MeanT_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))])
+        warning('There exist the varables!!!!!!!!!!!!!!!!!!!!!!');
+    end
+end
+% AnswFram = AnswFramAlineByTone(Trials{temp_Ind});
+%% ######## block 3 ######### 
+% get all neuron's AUC/ROC
+StartT = tic;
+for nROI = 1:size(CaSigAline,2)  % for tone aline data
+    IndvCaSigAline = squeeze(CaSigAline(:,nROI,:));
+    parfor FrT = 1:FrameLength
+        ROCout_temp(FrT) = ZL_roc_v1([IndvCaSigAline(Trials{Trial_Type},FrT),LabelType],0,0.05,0);
+    end
+    ROCout1{nROI} = ROCout_temp;    
+    disp(nROI);
+end
+toc(StartT);
+if ~AlineType
+    if UseRaw == 0
+        ROCout.(['MeanT_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]) = ROCout1;
+    else
+        ROCout.(['RawT_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]) = ROCout1;   
+    end
+else
+    if UseRaw == 0
+        ROCout.(['MeanA_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]) = ROCout1;
+    else
+        ROCout.(['RawA_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]) = ROCout1;   
+    end    
+end
+
+ROCout.MinOnsFrame = MinOnsFrame;
+ROCout.FrameTime = FrameTime;
+%
+save([SaveName '_ROC.mat'],'ROCout');
+
+%% ######## block 4 #########  Choice Aline
+% get all neuron's AUC/ROC
+for nROI = 1:nROIs   % for choice aline data
+    parfor FrA = 1:length_frames_A
+        if ~UseRaw
+            ROCout2_temp(FrA) = ZL_roc_v1([CaSigMean_Act{nROI}(Trials{Trial_Type},FrA),LabelType],0,0.05,0);
+        else
+            ROCout2_temp(FrA) = ZL_roc_v1([CaSigAlineAct{nROI}(Trials{Trial_Type},FrA),LabelType],0,0.05,0);
+        end
+    end    
+    ROCout2{nROI} = ROCout2_temp;   
+    disp(nROI)
+end
+toc(StartT);
+if UseRaw == 0
+    ROCout.(['MeanA_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))])  = ROCout2;
+else
+    ROCout.(['RawA_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))])  = ROCout2;    
+end
+save(fn,'ROCout','-append');
+%%  ######## block 5 ######### Threshold for Tone
+% get the max AUC frame's significant threshold
+AucTone = ROCout.MeanT_ROCout_AllTri_NovUnnovTyp;
+AucAct = ROCout.MeanA_ROCout_AllTri_NovUnnovTyp;
+for nROI = 1:nROIs % for tone aline data
+    AllAucVal_T = arrayfun(@(x) x.AUC, AucTone{nROI});
+    T_ind = find(AllAucVal_T == max(AllAucVal_T));
+    TMaxAUCFrame(nROI) = T_ind;    
+    [AllROC,~,sigvalue]=ROCSiglevelGene([CaSigMean_Tone{nROI}(Trials{Trial_Type},T_ind),LabelType],500,1,0.01);  % use shuffle data to get threshold
+    ToneRocShuffThresh(nROI) = sigvalue; 
+    disp(nROI);
+end
+if UseRaw == 0
+    ROCout.(['Mean_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type)) '_ShufThre'])(1,:) = ToneRocShuffThresh;
+    ROCout.(['Mean_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type)) '_MaxInd'])(1,:) = TMaxAUCFrame;
+else  
+    ROCout.(['Raw_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type)) '_ShufThre'])(1,:) = ToneRocShuffThresh;
+    ROCout.(['Raw_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type)) '_MaxInd'])(1,:) = TMaxAUCFrame;
+end
+%%  ######## block 6 ######### Threshold for Action
+% get the max AUC frame's significant threshold
+for nROI = 1:nROIs % for choice aline data
+    AllAucVal_A = arrayfun(@(x) x.AUC, AucAct{nROI});  
+    A_ind = find(AllAucVal_A == max(AllAucVal_A));
+    AMaxAUCFrame(nROI) = A_ind;
+    if A_ind <= length_frames_A
+        [AllROC,~,sigvalue]=ROCSiglevelGene([CaSigMean_Act{nROI}(Trials{Trial_Type},A_ind),LabelType],500,1,0.01);  % use shuffle data to get threshold
+    else
+        sigvalue = NaN;
+        AMaxAUCFrame(nROI)=NaN;
+    end
+        ActRocShuffThresh(nROI) = sigvalue;
+    disp(nROI);
+end
+if UseRaw == 0
+    ROCout.(['Mean_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type)) '_ShufThre'])(2,:) = ActRocShuffThresh;
+    ROCout.(['Mean_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type)) '_MaxInd'])(2,:) = AMaxAUCFrame;
+else  
+    ROCout.(['Raw_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type)) '_ShufThre'])(2,:) = ActRocShuffThresh;
+    ROCout.(['Raw_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type)) '_MaxInd'])(2,:) = AMaxAUCFrame;
+end
+save(fn,'ROCout','-append');
+
+
+
