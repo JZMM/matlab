@@ -1,0 +1,124 @@
+%% Plotting of AllTri_LowHighTyp
+fn = 'h35_20161127_ROC';  %% use dff filename
+load(fn);
+%%
+AlineType = 0;  % 0000: aline to tone   1111:aline to choice  ########################
+UseRawData = 0;  % 0000: Use smooth Mean data   1111:Use un mean data  ########################
+Trial_Type = 5;    %   1111:AllTri    2222:MisExcl      3333:ProbTri   4444:NonProbTri    5555.ProbTriMisExcl     6666.NonProbTriMisExcl
+                 %   7777.LowCorrTri   8888.HignCorrTri
+Choice_Type = 3;  %   1111:LowHighTyp    2222:NovUnnovTyp     3333:LeftRightType 4444:MisNonMis
+savefig = 1;    % 0000: don't save      1111: save the fig
+savePNG = 1;    % 0000: don't save      1111: save to PPT
+
+TrialsName = {'AllTri','MisExcl','ProbTri','NonProbTri','ProbTriMisExcl','NonProbTriMisExcl','LowCorrTri','HignCorrTri'};
+LabelsName = {'LowHighTyp','NovUnnovTyp','LeftRightType','MisNonMis'};
+
+if ~exist(['ROC_plot']);
+    mkdir(['ROC_plot']);    
+end 
+cd (['ROC_plot']);
+DirName = ['ROC_' LabelsName{Choice_Type}];
+if ~exist(DirName);
+    mkdir(DirName);
+end  
+cd(DirName);
+SavePath = pwd; 
+cd ..   
+cd ..
+if AlineType == 0
+    if UseRawData == 0
+        plot_data = ROCout.(['MeanT_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]);  
+        if ~exist(['MeanT_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]);
+            DirName = ['MeanT_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))];          
+        end
+    else
+        plot_data = ROCout.(['RawT_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]);
+        if ~exist(['RawT_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]);
+            DirName = ['RawT_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))];            
+        end          
+    end
+    OriginPoint = double(ROCout.MinOnsFrame);
+    OnsetMark = 'Stim';
+else
+    if UseRawData == 0
+        plot_data = ROCout.(['MeanA_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]);
+        if ~exist(['MeanA_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]);
+            DirName = ['MeanA_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))];          
+        end        
+    else
+        plot_data = ROCout.(['RawA_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]);
+        if ~exist(['RawA_ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]);
+            DirName = ['RawA _ROCout_' cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))];            
+        end        
+    end 
+    OriginPoint = double(MinActFrame);
+    OnsetMark = 'Choice';
+end
+
+for nROI = 1:size(plot_data,2)
+    AllAucVal(nROI,:) = arrayfun(@(x) x.AUC, plot_data{nROI});
+    MaxAUCVal(nROI) = max(AllAucVal(nROI,:));
+end
+% plotting
+fig = figure;hold on;
+set(gcf,'color','w','position',[2000 100 400 600]);
+
+
+[MaxAUCSort, inds1] = sort(MaxAUCVal);
+
+hold on;
+imagesc(AllAucVal(inds1,:));
+colormap jet;
+line([OriginPoint OriginPoint],[1 size(plot_data{2},2)],'color','w','linewidth',2);
+
+ylabel('Number of Neurons');
+xlabel('Time(s)');
+set(gca,'clim',[.4 .9],'xtick',[double(OriginPoint):1000/ROCout.FrameTime:size(plot_data{2},2)],'xticklabel',[0:1:10],'fontweight','bold','fontsize',12,...
+    'position',[0.15 0.2 0.6 0.6],'ydir','reverse');
+
+ylim([1 size(plot_data,2)]);
+xlim([1 size(plot_data{2},2)]);
+text(OriginPoint-15,112,OnsetMark);
+colorbar('Position',[0.8 0.2 0.1 0.3])
+
+% saving
+if AlineType == 0
+    if UseRawData == 0
+        title ({[' AUC Time Courses Tone Onset(mean) '];[ cell2mat(TrialsName(Trial_Type)) ' ' cell2mat(LabelsName(Choice_Type))]} );
+        if savefig 
+            saveas(fig,[SavePath '/' fn(1:end-4) '_AUC_Mean' TrialsName{Trial_Type} LabelsName{Choice_Type} '.fig']);       
+        end
+        if savePNG
+            saveas(fig,[SavePath '/'  fn(1:end-4) '_AUC_Mean' TrialsName{Trial_Type} LabelsName{Choice_Type} '.png']); 
+        end
+    else
+        title ({['ROI-' num2str(nROI) ' AUC Time Courses Tone Onset(raw) '];...
+            [cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]},'interpreter','none' );
+        if savefig 
+            saveas(fig,[SavePath '/'  fn(1:end-4) '_AUC_Raw' TrialsName{Trial_Type}(1:3) LabelsName{Choice_Type}(1:3) '.fig']);        
+        end     
+        if savePNG
+            saveas(fig,[SavePath '/'  fn(1:end-4) '_AUC_Raw' TrialsName{Trial_Type}(1:3) LabelsName{Choice_Type}(1:3) '.png']);
+        end
+    end
+else
+    if UseRawData == 0
+        title ({['ROI-' num2str(nROI) ' AUC Time Courses Choice Onset(mean) '];...
+            [cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]},'interpreter','none' );
+        if savefig 
+            saveas(fig,[SavePath '/'  fn(1:end-4) '_AUC_Mean' TrialsName{Trial_Type}(1:3) LabelsName{Choice_Type}(1:3) '.fig']);        
+        end   
+        if savePNG
+            saveas(fig,[SavePath '/'  fn(1:end-4) '_AUC_Mean' TrialsName{Trial_Type}(1:3) LabelsName{Choice_Type}(1:3) '.png']); 
+        end
+    else
+        title ({['ROI-' num2str(nROI) ' AUC Time Courses Choice Onset(raw) '];...
+            [cell2mat(TrialsName(Trial_Type)) '_' cell2mat(LabelsName(Choice_Type))]},'interpreter','none' );
+        if savefig 
+            saveas(fig,[SavePath '/'  fn(1:end-4) '_AUC_Raw' TrialsName{Trial_Type}(1:3) LabelsName{Choice_Type}(1:3) '.fig']);        
+        end         
+        if savePNG
+            saveas(fig,[SavePath '/'  fn(1:end-4) '_AUC_Raw' TrialsName{Trial_Type}(1:3) LabelsName{Choice_Type}(1:3) '.png']);   
+        end
+    end
+end    
