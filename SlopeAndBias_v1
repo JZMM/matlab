@@ -1,0 +1,165 @@
+%% files
+
+files = dir('*.mat');
+%% setting
+i = 6; % select file number
+b0(i,:) = [0; 1; 12;10];      % Initial guess of the parameters. Try different values to get good fit!
+useWeights(i) = 1;
+LightWeiPoints{i} = [ ];
+Col = [0.7 0.7 0.7];
+% The 4 parameters to fit.
+% b(1), the minimum ?P(Choice Right)?; 
+% b(2), the maximum ?P(Choice Right)?.
+% b(3), the inflection point of the sigmoid; 
+% 1/b(4), the slope of the sigmoid; 
+
+fn = files(i).name;
+load(fn);
+
+
+modelfun = @(b,x) (b(1)+ b(2)./(1+exp(-(x - b(3))./b(4))));
+opts = statset('nlinfit');
+opts.RobustWgtFun = 'bisquare';
+
+x = toneOct;
+y(i,:) = Scores;
+Miss_Ind = Data_extract.Miss_Ind;
+Tone_frequency = Data_extract.Tone_frequency;
+Fre = unique(Tone_frequency);
+
+for j = 1:length(Fre)
+    NumOfTrial(i,j) = sum(~Miss_Ind & Tone_frequency==Fre(j));
+    
+end
+
+if strcmp(fn(1:2),'ZL')
+    AnimName{i} = fn(4:6);
+else
+    AnimName{i} = input('Input an animal name:');
+end
+
+if useWeights(i)
+    NumOfTrial(i,LightWeiPoints{i}) = 1;
+    [b{i},R,J,CovB,MSE,ErrorModelInfo] = nlinfit(x,y(i,:),modelfun,b0(i,:),'Weights',NumOfTrial(i,:));
+else
+    [b{i},R,J,CovB,MSE,ErrorModelInfo] = nlinfit(x,y(i,:),modelfun,b0(i,:),opts);
+end
+X(i,:) = linspace(min(x), max(x), 100);
+[Y(i,:), delta(i,:)] = nlpredci(modelfun, X(i,:), b{i}, R, 'Covar',...
+    CovB, 'MSE', MSE);
+lower = Y(i,:) - delta(i,:);
+upper = Y(i,:) + delta(i,:);
+Slope(i) = 1/b{i}(4);
+Bias(i) = b{i}(3);
+
+figure;
+set(gcf,'position',[2000 200 500 400]);
+clf; hold on;
+axis square;
+xlim([toneOct(1)-0.01 toneOct(end)+0.01] );
+h_data = scatter(toneOct,y(i,:),80,Col,'filled');
+set(gcf,'color','w');
+h_fit = plot(X(i,:), Y(i,:),'color','k','linewidth',3);
+
+%% Save
+AllScores = y;
+
+save('ChrisomR_2nd_Opto_Slo-Bia','AnimName','AllScores','toneOct','Slope','Bias','b0','b','Y','X','useWeights','NumOfTrial','LightWeiPoints');
+
+%% Dots plotting
+files = {'C57_1st_NonMusci_Slo-Bia','Vgat_ChR_1st_NonOpto_Slo-Bia','C57_3rd_NonMusci_Slo-Bia','Vgat_ChR_3rd_NonOpto_Slo-Bia'};
+Mar = {'o','d','o','d'};
+Col = {'k','k','c','b'};
+
+
+MidLine = log2(16000);
+figure;hold on;
+MarSize = 9;
+ExtraSize = 2;
+title('Boundary and Slope');
+axis square;
+ylabel('Boundary(kHz)');
+% line([0 100],[log2(8000) log2(8000)],'linestyle','--','color',[.7 .7 .7]);
+% line([0 100],[log2(32000) log2(32000)],'linestyle','--','color',[.7 .7 .7]);
+line([0 100],[log2(16000) log2(16000)],'linestyle','--','color',[.7 .7 .7]);
+set(gca,'fontsize',18,'fontweight','bold','ytick',[log2(8000) log2(16000) log2(32000)],'yticklabel',[8 16 32]);
+
+xlabel('Slope');
+
+for tt =1:length(files)
+    fn = files{tt};
+    load(fn);
+    Slope_temp{tt} = Slope;
+    Bias_temp{tt} = Bias;
+    for jj = 1:length(Slope_temp{tt})
+        plot(Slope_temp{tt}(jj),Bias_temp{tt}(jj),'marker',Mar{tt},'color',Col{tt},'markersize',MarSize+ExtraSize,'markerfacecolor','w','markeredgecolor','none');
+        PL(tt) = plot(Slope_temp{tt}(jj),Bias_temp{tt}(jj),'marker',Mar{tt},'color',Col{tt},'markersize',MarSize,'markerfacecolor',Col{tt},'markeredgecolor','none');
+    end
+
+end
+% ylim([11 15.5]);
+% xlim([0 24]);
+% Leg = legend(PL([2 4 1 5 3]),{'C57','Vgat+ChR2','C57+Musci','Vgat+ChR2+Opto','Vgat+ChrimR+Opto'});
+%% Bar plotting
+Fn1 = 'Vgat_ChR_1st_NonOpto_Slo-Bia';
+Fn2 = 'Vgat_ChR_1st_Opto_Slo-Bia';
+Fn3 = 'ChrisomR_1st_Opto_Slo-Bia';
+Fn4 = 'Vgat_ChR_3rd_NonOpto_Slo-Bia';
+
+load(Fn1);
+Bias1 = Bias;
+Slope1 = Slope;
+load(Fn2);
+Bias2 = Bias;
+Slope2 = Slope;
+load(Fn3);
+Bias3 = Bias;
+Slope3 = Slope;
+load(Fn4);
+Bias4 = Bias;
+Slope4 = Slope;
+%%
+AllData = {Slope1,Slope2,Slope3,Slope4}; %% bias or slope
+% AllData = {Slope1,Slope2};
+GroupNum = 4;
+% XLabelName = {'C57+1stProbe','C57+1stPro+Musci','C57+3rdPro+Musci'};
+XLabelName = {'VgChR+1stProbe','VgChR+1stProbe+Opto','VgChrim+1stProbe+Opto','VgChR+3rdProbe+Opto'};
+barwidth = 0.5;
+
+
+figure;hold on;
+ylabel('Distance of Bound(Oct)');
+% ylabel('Slope');
+set(gca,'fontsize',18,'fontweight','bold','xtick',[1:GroupNum],'xticklabel',XLabelName,'xticklabelrotation',20,'position',[0.3 0.3 0.25+(GroupNum-2)*0.2 0.6]); % axis po: [0.3 0.3 0.25 0.6] for 2, [0.3 0.3 0.4 0.6] for 3
+for n = 1:size(AllData,2)
+    PL(n) = bar(n,mean(AllData{n}),barwidth,'facecolor',[.5 .5 .5]);
+    plot(n*ones(1,length(AllData{n})),AllData{n},'bo','linestyle','none','markersize',7);
+    SEM(n) = std(AllData{n})/(length(AllData{n}))^.5;
+    errorbar(n,mean(AllData{n}),SEM(n),'color','k','linewidth',1.5);
+end
+%%
+figure;hold on;
+ylabel('Slope');
+set(gca,'fontsize',18,'fontweight','bold','xtick',[1 2 3],'xticklabel',{'Vgat+ChR2','Vgat+ChR2+Opto','Vgat+ChrimsomR+Opto'},'xticklabelrotation',20,'position',[0.3 0.3 0.4 0.6]);
+PL1 = bar(1,mean(Slope1),0.4,'facecolor',[.5 .5 .5]);
+PL2 = bar(2,mean(Slope2),0.4,'facecolor',[.5 .5 .5]);
+PL2 = bar(3,mean(Slope3),0.4,'facecolor',[.5 .5 .5]);
+title('Slope');
+plot(ones(1,length(Slope1)),Slope1,'bo','linestyle','none','markersize',7);
+% plot([1 1 1 1 1.1],Slope1,'bo','linestyle','none','markersize',8);
+plot(2*ones(1,length(Slope2)),Slope2,'bo','linestyle','none','markersize',8);
+% plot([2 2 2 2.1 2],Slope2,'bo','linestyle','none','markersize',7);
+plot(3*ones(1,length(Slope3)),Slope3,'bo','linestyle','none','markersize',8);
+ylim([0 32]);
+xlim([0.5 3.5]);
+SEM1 = std(Slope1)/(length(Slope1))^.5;
+SEM2 = std(Slope2)/(length(Slope2))^.5;
+SEM3 = std(Slope3)/(length(Slope3))^.5;
+errorbar(1,mean(Slope1),SEM1,'color','k','linewidth',1.5);
+errorbar(2,mean(Slope2),SEM2,'color','k','linewidth',1.5);
+errorbar(3,mean(Slope3),SEM3,'color','k','linewidth',1.5);
+
+
+
+
+
