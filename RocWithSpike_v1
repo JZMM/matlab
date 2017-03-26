@@ -1,0 +1,245 @@
+
+
+fn = 'AlineSpike_h36_20161127_1st_of_3(0.5).mat';  % Aline data: Spike
+SaveName = 'h36_20161127_1st_of_3';
+Trial_Type = [1]; % ######################   Select  trials that are needed:  1:AllTri    2:MisExcl   3:ProbTri   4:NonProbTri 5.ProbTriMisExcl 6.NonProbTriMisExcl 7.LowCorrTri
+              % 8.HighCorrTri 9. NonProbTriCorr 10.ProbTriCorr 11.NonProLeftTri 12.NonProRightTri 13.NonProLowTri 14.NonProHighTri 15.LeftTri 16.RightTri 17.LowTrialMisExcl
+              % 18.HighTrialMisExcl 19.NonProHighCorrProLowWro 20.NonProHighCorrProLowCorr 21.NonProLowCorrProHighWro 22.NonProLowCorrProHighCorr 23.LowProMisExcl
+              % 24.HighProMisExcl
+Choice_Type = [1];% ############   Select  labels that are needed:  1:LowHighTyp    2:NovUnnovTyp   3:LeftRightType   4:MisNonMis
+UseRaw = 1; % 1 :use the raw data 
+SmoothBin = 3; % this will be called when UseSmooth = 1 
+AlineType = 0;  % 0: Aline to Tone   1 : Aline to Choice
+SigThreh = 0.99; % the significant threshhold for AUC
+BinForShuff = 3; % Bin size for calsulate thresh hold
+
+load(fn);
+if ~AlineType
+    SpikeAline = SpikeAlignedTone;
+else
+    SpikeAline = SpikeAlignedAct;
+end
+FrameLength = size(SpikeAline,3);
+binNum = floor(FrameLength/BinForShuff);
+if ~UseRaw
+   for n = 1:size(SpikeAline,2)
+       for m = 1:size(SpikeAline,1)
+           SpikeAline(m,n,:) = smooth(SpikeAline(m,n,:),SmoothBin); 
+       end
+   end
+end
+%%%%%%%% Define trials that are used
+AllTri = [1:size(SpikeAline,1)];            
+MisExcl = find(Miss_Ind==0);
+ProbTri = find(Probe_Ind==1);
+NonProbTri = find(Probe_Ind==0);
+ProbTriMisExcl = find(~Miss_Ind & Probe_Ind);
+NonProbTriMisExcl = find(~Miss_Ind & ~Probe_Ind);
+LowCorrTri = find(Trial_type == 0 & Action_choice == Trial_type);
+HighCorrTri = find(Trial_type == 1 & Action_choice == Trial_type);
+NonProbTriCorr = find(Action_choice == Trial_type & ~Probe_Ind);
+ProbTriCorr = find(Action_choice == Trial_type & Probe_Ind);
+NonProLeftTri = find(Action_choice == 0 & ~Probe_Ind);
+NonProRightTri = find(Action_choice == 1 & ~Probe_Ind);
+NonProLowTri = find(Trial_type == 0 & ~Miss_Ind & ~Probe_Ind);
+NonProHigTri = find(Trial_type == 1 & ~Miss_Ind & ~Probe_Ind);
+LeftTri = find(Action_choice == 0);
+RightTri = find(Action_choice == 1);
+LowTrialMisExcl = find(Trial_type == 0 & ~Miss_Ind);
+HighTrialMisExcl = find(Trial_type == 1 & ~Miss_Ind);
+NonProHighCorrProLowWro = [NonProHigTri find(Probe_Ind & Trial_type==0 & Action_choice == 1)];
+NonProHighCorrProLowCorr = [NonProHigTri find(Probe_Ind & Trial_type==0 & Action_choice == 0)];
+NonProLowCorrProHighWro = [NonProLowTri find(Probe_Ind & Trial_type==1 & Action_choice == 0)];
+NonProLowCorrProHighCorr = [NonProLowTri find(Probe_Ind & Trial_type==1 & Action_choice == 1)];
+LowProMisExcl = Probe_Ind==1 & Trial_type == 0 & ~Miss_Ind;
+HighProMisExcl = Probe_Ind==1 & Trial_type == 0 & ~Miss_Ind;
+
+
+Trials = {AllTri,MisExcl,ProbTri,NonProbTri,ProbTriMisExcl,NonProbTriMisExcl,LowCorrTri,HighCorrTri,...
+    NonProbTriCorr,ProbTriCorr,NonProLeftTri,NonProRightTri,NonProLowTri,NonProHigTri,LeftTri,RightTri,...
+    LowTrialMisExcl,HighTrialMisExcl,NonProHighCorrProLowWro,NonProHighCorrProLowCorr,NonProLowCorrProHighWro,...
+    NonProLowCorrProHighCorr,LowProMisExcl,HighProMisExcl};
+TrialsName = {'AllTri','MisExcl','ProbTri','NonProbTri','ProbTriMisExcl','NonProbTriMisExcl','LowCorrTri','HighCorrTri','NonProbTriCorr','ProbTriCorr','NonProLeftTri','NonProRightTri',...
+    'NonProLowTri','NonProHighTri','LeftTri','RightTri','LowTrialMisExcl','HighTrialMisExcl','NonProHighCorrProLowWro','NonProHighCorrProLowCorr','NonProLowCorrProHighWro','NonProLowCorrProHighCorr',...
+    'LowProMisExcl','HighProMisExcl'};
+
+LowHighTyp = double(Trial_type)';        % Define Label: 0 and 1
+NovUnnovTyp = double(Probe_Ind)';
+LeftRightType = double(Action_choice)';
+MisNonMisType = double(Miss_Ind)';
+
+Labels = {LowHighTyp,NovUnnovTyp,LeftRightType,MisNonMisType};   % ##################
+LabelsName = {'LowHighTyp','NovUnnovTyp','LeftRightType','MisNonMis'};   % ##################
+
+
+
+%%%%%%%%% creating directory
+CurrPath = pwd;
+if ~isdir('ROC_save')
+    mkdir('ROC_save');
+end
+cd ROC_save;
+if ~isdir('Spike')
+    mkdir('Spike');
+end
+cd Spike;
+if UseRaw
+   if ~isdir('UseRaw')
+      mkdir('UseRaw');
+      cd UseRaw;
+   end
+else
+   if ~isdir('UseSmooth')
+      mkdir('UseSmooth');
+      cd UseSmooth;
+   end   
+end
+SavePath = pwd;
+if exist([SaveName '_ROC.mat'])
+    load([SaveName '_ROC.mat']);
+end
+for i = 1:length(Trial_Type)
+    TT = Trial_Type(i);
+    for j = 1:length(Choice_Type)
+        CT = Choice_Type(j);
+        LabelType = Labels{CT}(Trials{TT});
+        if CT == 1
+            if any([7 8 13 14 17 18 19 20 21 22 23 24] == TT)
+                continue;
+            end
+        end
+        if CT == 2
+            if any([3 4 5 6 9 10 11 12 13 14 23 24] == TT)
+                continue;
+            end            
+        end
+        if CT == 3
+            if any([7 8 9 10 11 12 15 16 19 20 21 22 ] == TT)
+                continue;
+            end            
+        end  
+        if CT == 4
+            if any([2 5 6 7 8 9 10 11 12 15 16 17 18 19 20 21 22 23 24] == TT)
+                continue;
+            end            
+        end         
+        if exist('ROCout')
+            if ~AlineType
+                if isfield(ROCout,['ToneROCout_' cell2mat(TrialsName(TT)) '_' cell2mat(LabelsName(CT))])
+                    warning('There exist the varables!!!!!!!!!!!!!!!!!!!!!!');
+                    continue;
+                end                 
+            else
+                if isfield(ROCout,['ActROCout_' cell2mat(TrialsName(TT)) '_' cell2mat(LabelsName(CT))])
+                    warning('There exist the varables!!!!!!!!!!!!!!!!!!!!!!');
+                    continue;
+                end      
+            end
+        end
+        StartT = tic;
+        for nROI = 1:size(SpikeAline,2)  % for tone aline data
+            IndvCaSigAline = squeeze(SpikeAline(:,nROI,:));
+            SigValue_temp_1 = zeros(1,size(IndvCaSigAline,2))
+            for bN = 1:binNum
+                if bN == binNum
+                    IndvCaSigForShuf(:,bN) = mean(IndvCaSigAline(:,[1+(bN-1)*BinForShuff:end]),2);
+                else
+                    IndvCaSigForShuf(:,bN) = mean(IndvCaSigAline(:,[1+(bN-1)*BinForShuff:bN*BinForShuff]),2);
+                end
+            end
+            parfor FrT = 1:FrameLength
+                [AUC_temp(FrT),SE_temp(FrT),ci_temp(FrT,:),ProOverPre_temp(FrT)] = ZL_roc_v1([IndvCaSigAline(Trials{TT},FrT),LabelType],0,0.05,0);
+                if any([[0:binNum-1]*BinForShuff+1]==FrT)
+                    if FrT == (binNum-1)*BinForShuff+1
+                        [~,~,SigValue_temp_1(FrT)] = ROCSiglevelGene([IndvCaSigForShuf(Trials{TT},(FrT-1)/BinForShuff+1),LabelType],100,0,1-SigThreh);
+                    else
+                        [~,~,SigValue_temp_1(FrT)] = ROCSiglevelGene([IndvCaSigForShuf(Trials{TT},(FrT-1)/BinForShuff+1),LabelType],100,0,1-SigThreh);
+                    end
+                end
+                disp(FrT);
+            end
+            for Fr = 1:FrameLength
+                if mod(Fr-1,BinForShuff)>0
+                    SigValue_temp_1(Fr) = SigValue_temp_1(Fr-1);
+                end
+            end
+            AUC(nROI,:) = AUC_temp;
+            SE(nROI,:) = SE_temp;
+            ci(nROI,:,:) = ci_temp;
+            ProOverPre(nROI,:) = ProOverPre_temp;
+%             ShufReverInd(nROI,:) = ShufReverInd_temp;
+            SigValue(nROI,:) = SigValue_temp_1;
+            disp(nROI);
+            toc(StartT);
+        end
+        ROCout1.AUC = AUC;
+        ROCout1.SE = SE;
+        ROCout1.ci = ci;
+        ROCout1.ProOverPre = ProOverPre;
+%         ROCout1.ShufReverInd = ShufReverInd;
+        ROCout1.SigValue = SigValue;
+        if UseRaw
+            ROCout1.UseRawData = 1;
+            ROCout1.SmoothBin = 1;
+        else
+            ROCout1.UseRawData = 0;
+            ROCout1.SmoothBin = SmoothBin;
+        end
+        if AlineType
+            ROCout1.AlineType = 'Choice';  
+        else
+            ROCout1.AlineType = 'Tone';
+        end
+        ROCout1.SigThreh = SigThreh; 
+        ROCout1.BinForShuff = BinForShuff; 
+        ROCout1.DataSource = 'SpikeData';
+        
+
+        if ~AlineType
+            ROCout.(['ToneROCout_' cell2mat(TrialsName(TT)) '_' cell2mat(LabelsName(CT))]) = ROCout1;
+        else
+            ROCout.(['ActROCout_' cell2mat(TrialsName(TT)) '_' cell2mat(LabelsName(CT))]) = ROCout1;  
+        end        
+
+        ROCout.MinOnsFrame = MinOnsFrame;
+        ROCout.FrameTime = FrameTime;
+        
+        save([SavePath '/' SaveName '_ROC.mat'],'ROCout');            
+    end
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
