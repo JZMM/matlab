@@ -1,0 +1,32 @@
+files = dir('*.mat');
+for i =1:length(files)
+    fn = files(i).name;
+    load(fn);
+    if strcmp(fn(1:2),'ZL')
+        AnimName{i} = fn(4:6);
+    else
+        AnimName{i} = input('Input an animal name:');
+    end
+    Action_choice = Data_extract.Action_choice;
+    Miss_Ind = Data_extract.Miss_Ind;
+    Probe_index = Data_extract.Probe_index;
+    Tone_frequency = Data_extract.Tone_frequency;
+    Trial_type = Data_extract.Trial_type;
+    Fre = unique(Tone_frequency);
+    
+    
+    for j = 1:length(Fre)/2
+        NumOfTrial(i,j) = sum(~Miss_Ind & (Tone_frequency==Fre(j) | Tone_frequency==Fre(9-j)));
+        CorrTrial(i,j) = sum((Tone_frequency==Fre(j) | Tone_frequency==Fre(9-j)) & Action_choice==Trial_type);
+        PairScores(i,j) = CorrTrial(i,j)/NumOfTrial(i,j);
+    end
+end
+%%  Save
+
+
+
+
+
+
+
+
