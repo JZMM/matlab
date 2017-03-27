@@ -1,3 +1,5 @@
+% This code is to compare the score of pairs of tones 
+
 files = dir('*.mat');
 for i =1:length(files)
     fn = files(i).name;
@@ -15,18 +17,78 @@ for i =1:length(files)
     Fre = unique(Tone_frequency);
     
     
+
+%     for j = 1:length(Fre)/2
+%         NumOfTrial(i,j) = sum(~Miss_Ind & (Tone_frequency==Fre(j) | Tone_frequency==Fre(9-j)));
+%         CorrTrial(i,j) = sum((Tone_frequency==Fre(j) | Tone_frequency==Fre(9-j)) & Action_choice==Trial_type);
+%         PairScores(i,j) = (1-Scores(j)+Scores(9-j))/2;
+%     end
     for j = 1:length(Fre)/2
         NumOfTrial(i,j) = sum(~Miss_Ind & (Tone_frequency==Fre(j) | Tone_frequency==Fre(9-j)));
-        CorrTrial(i,j) = sum((Tone_frequency==Fre(j) | Tone_frequency==Fre(9-j)) & Action_choice==Trial_type);
-        PairScores(i,j) = CorrTrial(i,j)/NumOfTrial(i,j);
+        CorrTrial(i,j) = sum((Tone_frequency==Fre(j) & Action_choice==0)| (Tone_frequency==Fre(9-j) & Action_choice==1));
+        PairScores(i,j) = CorrTrial(i,j)/ NumOfTrial(i,j);
     end
 end
 %%  Save
+save('Vgat_ChrisomR_2nd_Opto_PairScore','AnimName','NumOfTrial','CorrTrial','PairScores');
 
 
+%%
+fn1 = 'C57_1st_NonMusci_PairScore';
+fn2 = 'C57_1st_Musci_PairScore';
+% fn3 = 'Vgat_ChrisomR_1st_Opto_PairScore';
+% fn4 = 'C57_1st_Musci_PairScore';
+% fn5 = 'C57_1st_Musci_PairScore';
+
+load(fn1);
+Scor1 = fliplr(PairScores);
+load(fn2);
+Scor2 = fliplr(PairScores);
+% load(fn3);
+% Scor3 = fliplr(PairScores);
+% load(fn4);
+% Scor4 = PairScores;
+% load(fn5);
+% Scor5 = PairScores;
+
+%%
+AllData = {Scor1,Scor2};%,Scor3};
+Mar = {'o','o'};%,'o'};
+Col = {'k',[.6 .6 .6]};%,'r'};
+erbarCol = {[0.3 0.3 0.3],[.5 .5 .5]};%,[1 0.3 .3]};
+MarSize = 9;
+ExtraSize = 2;
 
 
-
-
-
-
+figure;hold on;
+XLabelName = [0.1 0.3 0.5 1];
+title('Scores');
+xlabel('Distance from Boundary(Oct)');
+ylabel('Accuracy');
+set(gca,'fontsize',18,'fontweight','bold','xtick',XLabelName,'xticklabel',XLabelName,...
+    'position',[0.2 0.2 0.4 0.7]); % axis po: [0.3 0.3 0.4 0.6] for 2, [0.3 0.3 0.4 0.6] for 3
+set(gcf,'color','w');
+xlim([0 1]);
+ylim([0.4 1]);
+LineP = line([0 1],[0.5 0.5],'linestyle','--','color',[.8 .8 .8],'linewidth',1);
+for n = 1:size(AllData,2)
+    
+    for m = 1:4
+        MeanS(n,m) = mean(AllData{n}(:,m));
+        semS(n,m) = std(AllData{n}(:,m))/4^.5;
+        PL(n) = plot(XLabelName(m),MeanS(n,m),'marker',Mar{n},'color',Col{n},'markersize',MarSize,'markerfacecolor',Col{n});
+        plot(XLabelName(m),MeanS(n,m),'marker',Mar{n},'color','w','markersize',MarSize+ExtraSize,'markerfacecolor',Col{n});
+        errorbar(XLabelName(m),MeanS(n,m),semS(n,m),'color',erbarCol{n},'linewidth',1.5);
+    end
+    plot(XLabelName,MeanS(n,:),'linewidth',3,'color',Col{n},'marker','none');
+end
+%% analyze
+% for number balance
+[P,tbl,stats] = anova2([AllData{1};AllData{2}],size(AllData{1},1))
+%% analyze
+% for number unbalance
+tempDat1 = AllData{1};
+tempDat2 = AllData{2};
+Manipu = [ones(1,size(tempDat1,1)*size(tempDat1,2)) 2*ones(1,size(tempDat2,1)*size(tempDat2,2))];
+FreType = [reshape(repmat([1 2 3 4],size(tempDat1,1),1),1,[]) reshape(repmat([1 2 3 4],size(tempDat2,1),1),1,[])];
+[P,tbl,stats] = anovan([reshape(tempDat1,1,[]) reshape(tempDat2,1,[])],{Manipu,FreType},'model','interaction','varnames',{'Manu','Fre'})
