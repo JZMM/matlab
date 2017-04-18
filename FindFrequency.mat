@@ -1,0 +1,46 @@
+
+temp = AlineCaSigData.CaSigAlineTone;
+%%
+close all;
+figure;hold on;set(gcf,'position',[2000 200 800 400]);
+set(gca,'xtick',[1:1000/30:250],'xticklabel',[0:1:10]);
+temp1 = squeeze(temp(139,1,:));
+plot(temp1);
+plot(smooth(temp1),'r');
+[pxx,w] = periodogram(temp1);
+[pxx1,w1] = periodogram(temp1,[],[15:230]);
+[pxx2,w2] = periodogram(temp1,[],[],30);
+[pxx3,w3] = periodogram(temp1-mean(temp1),[],[],30);
+
+figure;hold on;set(gcf,'position',[2000 600 800 400]);
+% plot(w/(30*length(temp1)/1000),pxx);
+% plot(w/w(end)/(30*length(temp1)/1000),pxx);
+% plot(w/215,pxx,w1/215,pxx1,'o');
+plot(w2,pxx2);
+xlim([0 3]);
+figure;hold on;set(gcf,'position',[2600 600 800 400]);
+plot(w3,pxx3);
+xlim([0 3]);
+figure;hold on;set(gcf,'position',[2600 600 800 400]);
+% findpeaks(smooth(temp1,5),30,'MinPeakDistance',1,'Threshold',5,'MinPeakProminence',4,'Annotate','extents');
+findpeaks(smooth(temp1,5),30,'MinPeakProminence',50);
+% % plot(w/(30*length(temp1)/1000),pxx);
+% % plot(w/w(end)/(30*length(temp1)/1000),pxx);
+% % plot(w/215,pxx,w1/215,pxx1,'o');
+% plot(temp2);
+% % xlim([0 3]);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
