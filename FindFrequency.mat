@@ -4,7 +4,7 @@ temp = AlineCaSigData.CaSigAlineTone;
 close all;
 figure;hold on;set(gcf,'position',[2000 200 800 400]);
 set(gca,'xtick',[1:1000/30:250],'xticklabel',[0:1:10]);
-temp1 = squeeze(temp(139,1,:));
+temp1 = squeeze(temp(141,1,:));
 plot(temp1);
 plot(smooth(temp1),'r');
 [pxx,w] = periodogram(temp1);
@@ -29,14 +29,48 @@ findpeaks(smooth(temp1,5),30,'MinPeakProminence',50);
 % % plot(w/215,pxx,w1/215,pxx1,'o');
 % plot(temp2);
 % % xlim([0 3]);
+%%
+close all;
+Fs = 1000/FrameTime;            % Sampling frequency
+T = 1/Fs;             % Sampling period
+L = AlineCaSigData.length_frames_T-1;             % Length of signal
+t = (0:L-1)*T;        % Time vector
+temp1 = squeeze(temp(51,1,:));
+temp1 = smooth(temp1,11);
+figure;set(gcf,'position',[2000 200 600 600]);plot(temp1);
+Y = fft(temp1);
+
+P2 = abs(Y/L);
+P1 = P2(1:L/2+1);
+P1(2:end-1) = 2*P1(2:end-1);
+
+f = Fs*(0:(L/2))/L;
+figure;set(gcf,'position',[2600 200 600 600]);
+plot(f,P1,f(2),P1(2),'ro',f(3),P1(3),'ro');
+xlim([0 2]);
 
 
+%%
+% [SortVal Ind] = sort(temp1,'descend');
+IndP = [];
+Df = [];
+hafVal = [];
+for i = 1:length(temp1)
+    hafVal = temp1(i)/2;
+    if i < 16
+        Df(i) = 0;
+    else
+        [~,P] = min(abs(temp1(1:i-1)-hafVal));
+        Df(i) = temp1(i)/(i - P);
+        plot(i,temp1(i),'ko');
+        plot(P,temp1(P),'ro');
+    end
+end
+%%
+thrs = max(temp1)*0.8; 
+Df(find(temp1<thrs)) = 0;
 
-
-
-
-
-
+IndP = find(Df == max(Df));
 
 
 
