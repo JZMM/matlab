@@ -1,12 +1,10 @@
 %% tone data
 F = dir('*.mat');
-L_ind = [];
-R_ind = [];
-L_Data = [];
-R_Data = [];
+
 for i = 1:length(F)
  fn = F(i).name;
  load(fn);
+ AnimName{i} = fn([1:4 14:16]);
  T_L_data = AUC_Out.ToneROCout_LowCorrTri_NovUnnovTyp.AUC;
  T_R_data = AUC_Out.ToneROCout_HighCorrTri_NovUnnovTyp.AUC;
  T_L_label = AUC_Out.ToneROCout_LowCorrTri_NovUnnovTyp.ProOverPre;
@@ -21,20 +19,22 @@ for i = 1:length(F)
  T_L_data = 2*(T_L_data - 0.5);
  T_R_data = 2*(T_R_data - 0.5);
 
- 
- L_Data = [L_Data T_L_data];
- R_Data = [R_Data T_R_data]; 
- L_ind = [L_ind T_L_sigInd];
- R_ind = [R_ind T_R_sifInd]; 
- 
+
+L_NonSigData{i} = T_L_data(~T_L_sigInd);
+R_NonSigData{i} = T_R_data(~T_R_sifInd);
+L_Prob{i} = T_L_data(T_L_sigInd & T_L_data>0);
+L_Train{i} = T_L_data(T_L_sigInd & T_L_data<0);
+R_Prob{i} = T_R_data(T_R_sifInd & T_R_data>0);
+R_Train{i} = T_R_data(T_R_sifInd & T_R_data<0);
+NeuronNum(i) = length(T_L_data);
 end
-L_NonSigData = L_Data(~L_ind);
-R_NonSigData = R_Data(~R_ind);
-L_Prob = L_Data(L_ind & L_Data>0);
-L_Train = L_Data(L_ind & L_Data<0);
-R_Prob = R_Data(R_ind & R_Data>0);
-R_Train = R_Data(R_ind & R_Data<0);
-%%
+% NonSig.Low = L_NonSigData;
+% NonSig.High = R_NonSigData;
+% ProbOverTrain.Low = L_Prob;
+% ProbOverTrain.High = R_Prob;
+% TrainbOverPro.Low = L_Train;
+% TrainbOverPro.High = R_Train;
+%%                                                       
 binSize = 10;
 figure; hold on; set(gcf,'position',[2000 100 400 400]); xlim([-0.5 0.5]);
 set(gca,'position',[0.2 0.2 0.2 0.4],'fontsize',15,'fontweight','bold');
@@ -112,8 +112,12 @@ R_Prob = T_R_data(T_R_sifInd & T_R_data>0);
 R_Train = T_R_data(T_R_sifInd & T_R_data<0);
  
 end
+%%
 
-
-
+Grp1_1 = [1 4 6 9 12];
+Grp1_2 = [2 5 7 10 13];
+Grp2_1 = [2 7 10 13 15];
+Grp2_2 = [3 8 11 14 116];
+for i = 
 
 
