@@ -4,7 +4,7 @@ Bound = 16000;
 for i = 1:length(files)
     fn = files(i).name;
     load(fn);
-    AnimName{i} = fn(4:6);
+    PerfDataAnimName{i} = fn([4:7 20:21]);
     Action_choice = Data_extract.Action_choice(TestTrialNum);
     Tones = Data_extract.Tone_frequency(TestTrialNum);
     Freqs = unique(Tones);
@@ -36,6 +36,7 @@ Bound = 16000;
 for i = 1:length(files)
     fn = files(i).name;
     load(fn);
+    AnimName{i} = fn([4:7 18:21]);
     Block1 = [1:round(2*length(TestTrialNum)/3)];
     Block2 = [round(length(TestTrialNum)/3):length(TestTrialNum)];
     Action_choice = Data_extract.Action_choice(TestTrialNum);
@@ -51,22 +52,23 @@ for i = 1:length(files)
     ProbeLowCorr = ProbeLow & Action_choice==0;
     ProbeHighCorr = ProbeHigh & Action_choice==1;
     TrainHighCorr = TrainHigh & Action_choice==1;   
-    Score_1stBlock = [sum(TrainLowCorr(Block1))/sum(TrainLow(Block1)) sum(ProbeLowCorr(Block1))/sum(ProbeLow(Block1)) ...
+    Score_1stBlock(i,:) = [sum(TrainLowCorr(Block1))/sum(TrainLow(Block1)) sum(ProbeLowCorr(Block1))/sum(ProbeLow(Block1)) ...
         sum(ProbeHighCorr(Block1))/sum(ProbeHigh(Block1)) sum(TrainHighCorr(Block1))/sum(TrainHigh(Block1))];
-    Score_2ndBlock = [sum(TrainLowCorr(Block2))/sum(TrainLow(Block2)) sum(ProbeLowCorr(Block2))/sum(ProbeLow(Block2)) ...
+    Score_2ndBlock(i,:) = [sum(TrainLowCorr(Block2))/sum(TrainLow(Block2)) sum(ProbeLowCorr(Block2))/sum(ProbeLow(Block2)) ...
         sum(ProbeHighCorr(Block2))/sum(ProbeHigh(Block2)) sum(TrainHighCorr(Block2))/sum(TrainHigh(Block2))];  
 
-    Score_1st_Nor = Score_1stBlock;
-    Score_2nd_Nor = Score_2ndBlock;
-    Score_1st_Nor(1:2) = 1-Score_1st_Nor(1:2);
-    Score_2nd_Nor(1:2) = 1-Score_2nd_Nor(1:2);
-    Score_1st_Nor = (Score_1st_Nor-Score_1st_Nor(1))/(Score_1st_Nor(end)-Score_1st_Nor(1));
-    Score_2nd_Nor = (Score_2nd_Nor-Score_2nd_Nor(1))/(Score_2nd_Nor(end)-Score_2nd_Nor(1));
-    Score_1st_Nor(1:2) = 1-Score_1st_Nor(1:2);
-    Score_2nd_Nor(1:2) = 1-Score_2nd_Nor(1:2);
-    ScoreImpr_1st2ndBlock = Score_2nd_Nor - Score_1st_Nor;
-    save(fn,'Score_1stBlock','Score_2ndBlock','Score_1st_Nor','Score_2nd_Nor','ScoreImpr_1st2ndBlock','-append');
+    Score_1st_Nor(i,:) = Score_1stBlock(i,:);
+    Score_2nd_Nor(i,:) = Score_2ndBlock(i,:);
+    Score_1st_Nor(i,1:2) = 1-Score_1st_Nor(i,1:2);
+    Score_2nd_Nor(i,1:2) = 1-Score_2nd_Nor(i,1:2);
+    Score_1st_Nor(i,:) = (Score_1st_Nor(i,:)-Score_1st_Nor(i,1))/(Score_1st_Nor(i,4)-Score_1st_Nor(i,1));
+    Score_2nd_Nor(i,:) = (Score_2nd_Nor(i,:)-Score_2nd_Nor(i,1))/(Score_2nd_Nor(i,4)-Score_2nd_Nor(i,1));
+    Score_1st_Nor(i,1:2) = 1-Score_1st_Nor(i,1:2);
+    Score_2nd_Nor(i,1:2) = 1-Score_2nd_Nor(i,1:2);
+    ScoreImpr_1st2ndBlock(i,:) = Score_2nd_Nor(i,:) - Score_1st_Nor(i,:);
+%     save(fn,'Score_1stBlock','Score_2ndBlock','Score_1st_Nor','Score_2nd_Nor','ScoreImpr_1st2ndBlock','-append');
 end
+% save('Performance_2P.mat','Score_1stBlock','Score_2ndBlock','Score_1st_Nor','Score_2nd_Nor','ScoreImpr_1st2ndBlock','AnimName');
 %%
 files = dir('*.mat');
 Bound = 16000;
