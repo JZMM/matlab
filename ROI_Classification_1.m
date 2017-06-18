@@ -1,6 +1,8 @@
-AligData = 'AlineCaSig_DfModef0SubPreTone_h36_20161127';
-% BehData ='ZL_h36_Rig2P_20161127-fix_Virables';
-% load('dff_ZL_h36_20161127_fied1_d150_3x','F_num_T','F_num_A');
+AligData = 'AlineCaSig_h35_20161127';
+BehData ='ZL_h35_Rig2P_20161127_Virables';
+DffFile = 'dff_ZL_h35_20161127_fied1_d150_3x';
+load(BehData)
+load(DffFile,'F_num_T','F_num_A','MinActFrame','MinActFrame');
 
 isPlot = 1;
 SaveFig = 0; 
@@ -23,19 +25,31 @@ HighTrain_temp = Tone_frequency == Freq(end) & Action_choice == 1;
 LowProbe_temp = Tone_frequency < Boundary & Probe_Ind & Action_choice == 0;
 HighProbe_temp = Tone_frequency > Boundary & Probe_Ind & Action_choice == 1;
 
-ChoiceTime = F_num_A(TestTrialNum,1)-F_num_T(TestTrialNum,1)+MinActFrame;
+LowTrain_temp_Wro = Tone_frequency == Freq(1) & Action_choice == 1; 
+HighTrain_temp_Wro = Tone_frequency == Freq(end) & Action_choice == 0; 
+LowProbe_temp_Wro = Tone_frequency < Boundary & Probe_Ind & Action_choice == 1;
+HighProbe_temp_Wro = Tone_frequency > Boundary & Probe_Ind & Action_choice == 0;
+
+RewTime = F_num_A(TestTrialNum,1)-F_num_T(TestTrialNum,1)+MinActFrame;
 LowTrain = LowTrain_temp(TestTrialNum) ; 
 HighTrain = HighTrain_temp(TestTrialNum) ; 
 LowProbe = LowProbe_temp(TestTrialNum) ;
-HighProbe = HighProbe_temp(TestTrialNum);
+HighProbe = HighProbe_temp(TestTrialNum); 
+LowTrain_Wro = LowTrain_temp_Wro(TestTrialNum) ; 
+HighTrain_Wro = HighTrain_temp_Wro(TestTrialNum) ; 
+LowProbe_Wro = LowProbe_temp_Wro(TestTrialNum) ;
+HighProbe_Wro = HighProbe_temp_Wro(TestTrialNum); 
 AllTypes = {LowTrain,LowProbe,HighProbe,HighTrain};
+AllTypes = {LowTrain_Wro,LowProbe_Wro,HighProbe_Wro,HighTrain_Wro};
 FrameLength = AlineCaSigData.length_frames_T;
 TitleName = {'Train Low' 'Probe Low' 'Probe High' 'Train High'};
+TitleName_Wro = {'Train Low Wro' 'Probe Low Wro' 'Probe High Wro' 'Train High Wro'};
 FormerHaft = TestTrialNum(1:round(length(TestTrialNum)/2)) ; 
 LaterHaft = TestTrialNum(round(length(TestTrialNum)/2)+1:end); 
 %% First Lick Time
 FirstLick = FirstLickTime_fun(Data_extract);
 FirstLick_test = FirstLick(TestTrialNum);
+FirstLick_test_frame = round(FirstLick_test/FrameTime) + double(MinOnsFrame);
 FirstLick_test_b1 = FirstLick_test(FormerHaft);
 FirstLick_test_b2 = FirstLick_test(LaterHaft);
 for kk = 1:4
@@ -49,6 +63,14 @@ for kk = 1:4
     WholeFirstLickTime_SecondHaf_mean(kk) = mean(WholeFirstLickTime_SecondHaf{kk});
     WholeFirstLickTime_SecondHaf_SEM(kk) = std(WholeFirstLickTime_SecondHaf{kk})/(length(WholeFirstLickTime_SecondHaf{kk}))^0.5;      
 end
+figure;hold on; set(gcf,'position',[2900 290 250 150]);
+line([0 5],[800 800],'color',[.7 .7 .7],'linestyle','--');
+errorbar(1:4,WholeFirstLickTime_FirstHaf_mean,WholeFirstLickTime_FirstHaf_SEM,'b.','markersize',15,'linestyle','-');
+errorbar(1:4,WholeFirstLickTime_SecondHaf_mean,WholeFirstLickTime_SecondHaf_SEM,'r.','markersize',15,'linestyle','-');
+errorbar(1:4,WholeFirstLickTime_mean,WholeFirstLickTime_SEM,'k.','markersize',15,'linestyle','-');
+xlim([0.5 4.5]);
+ylim([0 1500]);
+title('First Lick Time');
 %%
 ColLimit = 80;
 
@@ -83,9 +105,11 @@ for ROI  = 32%1:size(testData,2)
         [~,LateVsRewardSig(ROI,i),~] = ranksum(mean(tempData_Act(:,MinActFrame:MinActFrame+45),2),mean(tempData_Act(:,MinActFrame+50:end),2),'alpha',sigAlpha);
         LateOverReward(ROI,i) = mean(mean(tempData_Act(:,MinActFrame+30:end),2))-mean(mean(tempData_Act(:,MinActFrame:MinActFrame+15),2));
         subplot(1,4,i);hold on;
-        [ChoiTime Inds] = sort(ChoiceTime(AllTypes{i}));
+        [RewardTime Inds] = sort(RewTime(AllTypes{i}));
+        ChoiceTime = FirstLick_test_frame(AllTypes{i});
         imagesc(tempData_Tone(Inds,:));
-        plot(ChoiTime,[1:sum(AllTypes{i})],'r.','markersize',8);
+        plot(RewardTime,[1:sum(AllTypes{i})],'r.','markersize',8);
+        plot(ChoiceTime(Inds),[1:sum(AllTypes{i})],'marker','.','color','c','markersize',8,'linestyle','none');
         set(gca,'clim',[ClimLow ClimHigh],'fontsize',15,'fontweight','bold','xtick',[double(MinOnsFrame):1000/FrameTime:FrameLength],'xticklabel',[0:1:10]);
         ylim([1 sum(AllTypes{i})]);
         xlim([0 FrameLength]);
@@ -101,12 +125,38 @@ for ROI  = 32%1:size(testData,2)
         end
         title(TitleName{i});
     end
-    fig = figure; set(fig,'position',[2900 750 1000 350],'color','w');
+    fig = figure; set(fig,'position',[1900 250 1000 200],'color','w');  % Wrong trial color plot
+    for i = 1:4
+        tempDataWro_Tone = SelectData_Tone(AllTypes_Wro{i},:);
+        subplot(1,4,i);hold on;
+        [RewardTime Inds] = sort(RewTime(AllTypes_Wro{i}));
+        ChoiceTime = FirstLick_test_frame(AllTypes_Wro{i});
+        imagesc(tempDataWro_Tone(Inds,:));
+        plot(RewardTime,[1:sum(AllTypes_Wro{i})],'r.','markersize',8);
+        plot(ChoiceTime(Inds),[1:sum(AllTypes_Wro{i})],'marker','.','color','c','markersize',8,'linestyle','none');
+        set(gca,'clim',[ClimLow ClimHigh],'fontsize',15,'fontweight','bold','xtick',[double(MinOnsFrame):1000/FrameTime:FrameLength],'xticklabel',[0:1:10]);
+        ylim([1 sum(AllTypes_Wro{i})]);
+        xlim([0 FrameLength]);
+        line([MinOnsFrame MinOnsFrame],[0 sum(AllTypes_Wro{i})],'color','w','linewidth',2);
+        if i == 1
+           ylabel('Number of Trials');
+           xlabel('Time(s)')
+    %        text(-20,sum(AllTypes{i})+5,'Stim Onset');
+        end
+        if i ==4
+           ColBar = colorbar('position',[0.92 0.1 0.03 0.5]); 
+           text(260,sum(AllTypes_Wro{i}*0.7),'\DeltaF/F0(%)','fontweight','bold');
+        end
+        title(TitleName_Wro{i});        
+    end
+    fig = figure; set(fig,'position',[2900 750 1000 350],'color','w');   % Unsort Correct trials color plot
     for i =1:4
         subplot(1,4,i);hold on;
         tempData_Tone = SelectData_Tone(AllTypes{i},:);
+        ChoiceTime = FirstLick_test_frame(AllTypes{i});
         imagesc(tempData_Tone);
-        plot(ChoiceTime(AllTypes{i}),[1:sum(AllTypes{i})],'r.','markersize',8);
+        plot(RewTime(AllTypes{i}),[1:sum(AllTypes{i})],'r.','markersize',8);
+        plot(ChoiceTime,[1:sum(AllTypes{i})],'c.','markersize',8);
         set(gca,'clim',[ClimLow ClimHigh],'fontsize',15,'fontweight','bold','xtick',[double(MinOnsFrame):1000/FrameTime:FrameLength],'xticklabel',[0:1:10]);
         ylim([1 sum(AllTypes{i})]);
         xlim([0 FrameLength]);
@@ -137,8 +187,8 @@ for ROI  = 32%1:size(testData,2)
 %         t_h.Position(4) = 1;
 
         
-        fig = figure; % plot 1 trace
-        set(fig,'position',[1900 450 1000 220],'color','w');
+        fig = figure; % plot Align to tone trace
+        set(fig,'position',[1900 470 1000 220],'color','w');
         for i =1:4
             subplot(1,4,i);hold on;
 %             axis square;
@@ -147,14 +197,14 @@ for ROI  = 32%1:size(testData,2)
             SEM_T = std(temp_T)/(sum(AllTypes{i}))^0.5;
             SEM_A = std(temp_A)/(sum(AllTypes{i}))^0.5;
             Act_Trace = mean(temp_A);
-            line([MinOnsFrame MinOnsFrame],[ClimHighTrace*-0.2 ClimHighTrace*0.2],'color',[.7 .7 .7],'linewidth',1);
-            line([MinOnsFrame+round(300/FrameTime)+1 round(MinOnsFrame+300/FrameTime)+1],[ClimHighTrace*-0.2 ClimHighTrace*0.2],'color','r','linewidth',1);
-            line([MinOnsFrame+round(800/FrameTime)+1 round(MinOnsFrame+800/FrameTime)+1],[ClimHighTrace*-0.2 ClimHighTrace*0.2],'color','g','linewidth',1);
             line([1 FrameLength],[0 0],'linestyle','--','color',[.7 .7 .7],'linewidth',1);
             plot(mean(temp_T),'color','k');
             plot([1-MinActFrame+MinOnsFrame+round(800/FrameTime):1-MinActFrame+MinOnsFrame+round(800/FrameTime)+length(Act_Trace)-1],Act_Trace,'color','b');
             patch([1:FrameLength fliplr(1:FrameLength)],[mean(temp_T)-SEM_T fliplr(mean(temp_T)+SEM_T)],'k','edgecolor','none');
             patch([1:length(Act_Trace) fliplr(1:length(Act_Trace))],[Act_Trace-SEM_A fliplr(Act_Trace+SEM_A)],'b','edgecolor','none');
+            line([MinOnsFrame MinOnsFrame],[ClimHighTrace*-0.2 ClimHighTrace*0.2],'color',[.7 .7 .7],'linewidth',1);
+            line([MinOnsFrame+round(300/FrameTime)+1 round(MinOnsFrame+300/FrameTime)+1],[ClimHighTrace*-0.2 ClimHighTrace*0.2],'color','r','linewidth',1);
+            line([MinOnsFrame+round(800/FrameTime)+1 round(MinOnsFrame+800/FrameTime)+1],[ClimHighTrace*-0.2 ClimHighTrace*0.2],'color','g','linewidth',1);            
             set(gca,'fontsize',15,'fontweight','bold','xtick',[double(MinOnsFrame):1000/FrameTime:FrameLength],'xticklabel',[0:1:10]);
             ylim([-50 ClimHighTrace]);
             xlim([0 FrameLength]);
@@ -171,9 +221,39 @@ for ROI  = 32%1:size(testData,2)
             end
             title(TitleName{i});
         end
-    
-        fig = figure; hold on; % plot 2 trace
-        set(fig,'position',[2900 450 1000 220],'color','w');
+        fig = figure; % plot Align to tone trace for Wrong trials
+        set(fig,'position',[1900 -20 1000 220],'color','w');
+        for i =1:4
+            subplot(1,4,i);hold on;
+            temp_T = SelectData_Tone(AllTypes_Wro{i},:);
+            temp_A = SelectData_Act(AllTypes_Wro{i},:);
+            SEM_T = std(temp_T)/(sum(AllTypes_Wro{i}))^0.5;
+            SEM_A = std(temp_A)/(sum(AllTypes_Wro{i}))^0.5;
+            Act_Trace = mean(temp_A);
+            line([1 FrameLength],[0 0],'linestyle','--','color',[.7 .7 .7],'linewidth',1);
+            plot(mean(temp_T),'color','k');
+            plot([1-MinActFrame+MinOnsFrame+round(800/FrameTime):1-MinActFrame+MinOnsFrame+round(800/FrameTime)+length(Act_Trace)-1],Act_Trace,'color','b');
+            patch([1:FrameLength fliplr(1:FrameLength)],[mean(temp_T)-SEM_T fliplr(mean(temp_T)+SEM_T)],'k','edgecolor','none');
+            patch([1:length(Act_Trace) fliplr(1:length(Act_Trace))],[Act_Trace-SEM_A fliplr(Act_Trace+SEM_A)],'b','edgecolor','none');
+            line([MinOnsFrame MinOnsFrame],[ClimHighTrace*-0.2 ClimHighTrace*0.2],'color',[.7 .7 .7],'linewidth',1);
+            line([MinOnsFrame+round(300/FrameTime)+1 round(MinOnsFrame+300/FrameTime)+1],[ClimHighTrace*-0.2 ClimHighTrace*0.2],'color','r','linewidth',1);
+            line([MinOnsFrame+round(800/FrameTime)+1 round(MinOnsFrame+800/FrameTime)+1],[ClimHighTrace*-0.2 ClimHighTrace*0.2],'color','g','linewidth',1);            
+            set(gca,'fontsize',15,'fontweight','bold','xtick',[double(MinOnsFrame):1000/FrameTime:FrameLength],'xticklabel',[0:1:10]);
+            ylim([-50 ClimHighTrace]);
+            xlim([0 FrameLength]);
+            alpha 0.3
+            if i == 1
+               ylabel(['\DeltaF/F0']);
+               xlabel('Time(s)')
+            end
+            if i > 1
+               set(gca,'ycolor','w','ytick',[],'yticklabel',[]); 
+            end
+            title(TitleName{i});
+        end    
+        
+        fig = figure; hold on; % plot Align to Reward trace
+        set(fig,'position',[2900 470 1000 220],'color','w');
         for i =1:4
             subplot(1,4,i);hold on;
             axis square;
